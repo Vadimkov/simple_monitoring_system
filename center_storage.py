@@ -22,7 +22,7 @@ def create_monitoring_db():
 
 
 def update_file(agentname, dirname, filename, content):
-    log.debug("Update file %s for %s from dir %s:\n%s" % (filename, agent, dirname, content))
+    log.debug("Update file %s for %s from dir %s:\n%s" % (filename, agentname, dirname, content))
     table = FILES_TABLE_NAME
 
     try:

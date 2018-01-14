@@ -57,7 +57,10 @@ class CommandHandler(asyncore.dispatcher):
         responce = get_full_diff() 
         update_last_requested_from_last_version()
 
-        self.write_buffer = str(responce)
+        responce = [len(responce)] + responce
+        log.warning("Try to write diff: %s" % (str(responce)))
+        self.write_buffer = responce
+
         #log.info("_send_diff AFTER:\n" + str(mUnit))
         log.info("Write responce to write buffer")
 
@@ -134,10 +137,11 @@ def check_dir(dirname):
         # compare files
         if lastRequestedFileContent:
             lastRequestedFileContent = lastRequestedFileContent[0][0]
-        log.info("Last requested:\n" + str(lastRequestedFileContent))
-        log.info("Current:\n" + str(currentFileContent))
+        log.debug("Last requested:\n" + str(lastRequestedFileContent))
+        log.debug("Current:\n" + str(currentFileContent))
 
         if currentFileContent != lastRequestedFileContent:
+            log.info("Update file %s" % (filepath))
             update_diff_file(dirname, filename, currentFileContent)
         
         update_last_version_file(dirname, filename, currentFileContent)
@@ -167,7 +171,7 @@ def main():
 if __name__ == "__main__":
     logging.basicConfig(datefmt='[%H:%M:%S]')
     log = logging.getLogger("AgentLogger")
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
     log.info("Logger created")
 
     counter = 0

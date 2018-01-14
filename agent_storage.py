@@ -151,5 +151,5 @@ def update_last_requested_from_last_version():
 
 logging.basicConfig(datefmt='[%H:%M:%S]')
 log = logging.getLogger("StorageLogger")
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 log.info("Logger created")
