@@ -1,11 +1,29 @@
-import os, logging
+import os, asyncore, pickle, logging
+from protocol import *
 from socket import *
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Process
 from time import sleep, time
 from agent_storage import *
-import asyncore, pickle
+from logger import log
 
+
+def handleRequest(mes, sock):
+    if mes.getType() == 'DiffRequestMes':
+        handleDiffRequest(sock)
+    else:
+        raise UnsupportedMessageTypeException(mes.getType()) 
+
+def handleDiffRequest(sock):
+    response = get_full_diff() 
+    update_last_requested_from_last_version()
+
+    log.warning("Try to write diff: %s" % (str(response)))
+
+    diffResponseMes = DiffResponseMes()
+    diffResponseMes.setField('DiffUpdate', response)
+    send_message(diffResponseMes, sock)
+    
 
 class CommandHandler(asyncore.dispatcher):
 
@@ -13,22 +31,12 @@ class CommandHandler(asyncore.dispatcher):
 
     def handle_read(self):
         log.info("Try to read command")
-        data = self.recv(1024)
-        if not data:
-            log.warning("Empty data")
-            return None
-
-        message = _parse(data)
-        if len(message) == 0:
-            log.warning("Empty message")
-            return None
+        mes = getMessage(self)
         
-        messageType = message[0]
-        log.info("Message type: " + messageType)
-        if messageType == "command":
-            self._execute_command(message[1])
-        elif messageType == "request":
+        if mes.getType() == "DiffRequestMessage":
             self._send_diff()
+        else:
+            log.error("Unsupported message:\n%s" % (str(mes)))
 
     def handle_close(self):
         log.info("Close!!!")
@@ -43,68 +51,48 @@ class CommandHandler(asyncore.dispatcher):
     
     def handle_write(self):
         log.info("Try write: " + str(self.write_buffer))
-        sent = self.send(pickle.dumps((self.write_buffer)))
+        send_message(self.write_buffer, self)
         self.write_buffer = None
-        log.debug("Sent: " + str(sent))
-
-    def _execute_command(self, command):
-        log.info("_execute_comman: " + command)
-        self.write_buffer = "Command '" + command + " executed"
-        log.info("Last: " + str(lastFiles))
-        log.info("Diff: " + str(lastFiles))
     
     def _send_diff(self):
-        responce = get_full_diff() 
-        update_last_requested_from_last_version()
-
-        responce = [len(responce)] + responce
-        log.warning("Try to write diff: %s" % (str(responce)))
-        self.write_buffer = responce
+        self.write_buffer = diffResponseMes
 
         #log.info("_send_diff AFTER:\n" + str(mUnit))
-        log.info("Write responce to write buffer")
+        log.info("Write response to write buffer")
 
 
-class TbFindAgent(asyncore.dispatcher):
-
-    handler = CommandHandler
+class TbFindAgent():
  
     def __init__(self):
         self.thisHost = "127.0.0.1"
         self.thisPort = 8085 
-        asyncore.dispatcher.__init__(self)
-        self.create_socket(AF_INET, SOCK_STREAM)
-        self.bind((self.thisHost, self.thisPort))
-        self.listen(1)
         
-
     def _registerToCenter(self, centerHost, centerPort):
-        sock = socket(AF_INET, SOCK_STREAM)
-        sock.connect((centerHost, centerPort))
-        sock.send(pickle.dumps([self.thisHost, self.thisPort]))
-        data = sock.recv(1024)
-        if not data:
-            log.critical("Failed. Didn't get responce from center")
-            raise Exception("Didn't get responce from center")
+        regRequest = RegisterRequestMes()
+        regRequest.setField('Host', self.thisHost)
+        regRequest.setField('Port', self.thisPort)
 
-        responce = _parse(data)
-        if len(responce) > 0:
-            log.info("Responce for registration: " + responce[0])
+        regResponse = get_message(send_message_by_address(regRequest, (centerHost, centerPort)))
+
+        if regResponse.getField('Status'):
+            log.info("Registration passed")
         else:
             log.error("Registration failed")
     
-    def handle_accepted(self, sock, addr):
-        global mUnit
-        log.info("Accepted")
-        handler = self.handler(sock)
-
     def run(self, centerHost, centerPort):
         self._registerToCenter(centerHost, centerPort)
-        asyncore.loop()
+        sock = socket(AF_INET, SOCK_STREAM)
+        sock.bind((self.thisHost, self.thisPort))
+        sock.listen(5)
+    
+        log.info("Agent has been started!")
 
-    def handle_close(self):
-        log.info("Close!!!")
-        self.close()
+        while True:
+            (conn, addr) = sock.accept()
+            log.info("Connection from '%s'" % (str(addr)))
+
+            mes = get_message(conn)
+            handleRequest(mes, conn)
     
 
 def _parse(data):
@@ -169,11 +157,5 @@ def main():
     
 
 if __name__ == "__main__":
-    logging.basicConfig(datefmt='[%H:%M:%S]')
-    log = logging.getLogger("AgentLogger")
     log.setLevel(logging.INFO)
-    log.info("Logger created")
-
-    counter = 0
-
     main()

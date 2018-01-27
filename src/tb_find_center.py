@@ -1,10 +1,11 @@
 import asyncore, pickle
-import logging
 import time
+import logging
 from socket import *
 from threading import Thread
 from center_storage import *
-
+from protocol import *
+from logger import *
 
 active_agents = []
 
@@ -31,8 +32,8 @@ class Agent(object):
         return agentName
 
     def _send_last_version_req(self):
-        log.info("send last version request")
-        request_message = pickle.dumps(['request'])
+        diffReqMes = DiffRequestMes()
+        
         self._agent_socket = socket(AF_INET, SOCK_STREAM)
         self._agent_socket.connect((self.address, self.port))
         self._agent_socket.send(request_message)
@@ -54,14 +55,15 @@ class Agent(object):
 
         return new_files
 
-    def getLastVersion(self):        
+    def getLastVersion(self):
         new_files = []
-        try:
-            self._send_last_version_req()
-            new_files = self._recv_last_version()
-        except Exception as e:
-            log.error("Failed agent logger: %s: %s " % (type(e).__name__, e))
-        return new_files
+#        try:
+        log.info("send last version request")
+        diffRequestMes = DiffRequestMes()
+        diffResponseMes = get_message(send_message_by_address(diffRequestMes, (self.address, self.port)))
+ #       except Exception as e:
+        #log.error("Failed agent logger: %s: %s " % (type(e).__name__, e))
+        return diffResponseMes.getField('DiffUpdate')
     
 
 class ActiveAgents(object):
@@ -77,10 +79,10 @@ class ActiveAgents(object):
             return False
 
 
-class AgentLogger(Thread):
+class AgentSecretary(Thread):
 
     def __init__(self, host, port):
-        super(AgentLogger, self).__init__()
+        super(AgentSecretary, self).__init__()
         self.host = host
         self.port = port
     
@@ -91,32 +93,24 @@ class AgentLogger(Thread):
 
         log.info("Agent logger starting up.")
 
-        try:
-            while True:
-                (conn, addr) = agent_logger_socket.accept()
-                log.info("Connected agent from %s" % (str(addr)))
-                data = conn.recv(1024)
+        while True:
+            (conn, addr) = agent_logger_socket.accept()
+            log.info("Connected agent from %s" % (str(addr)))
+            mes = get_message(conn)
+            
+            agent = self._agentParse(mes)
+            if self._registerAgent(agent):
+                self._sendConfirm(conn)
+            else:
+                self._sendReject(conn)
                 
-                if not data:
-                    break
-                
-                agent = self._agentParse(data)
-                if self._registerAgent(agent):
-                    self._sendConfirm(conn)
-                else:
-                    self._sendReject(conn)
-                    
-                conn.close()
-        except Exception as e:
-            log.error("Failed agent logger: %s: %s " % (type(e).__name__, e))
-        finally:
-            agent_logger_socket.close()
+            conn.close()
+        agent_logger_socket.close()
 
 
-    def _agentParse(self, agent):
-        agent = pickle.loads(agent)
-        address = agent[0]
-        port = agent[1]
+    def _agentParse(self, regRequest):
+        address = regRequest.getField('Host')
+        port = regRequest.getField('Port')
         return Agent(address, port)
 
     def _registerAgent(self, agent):
@@ -128,10 +122,14 @@ class AgentLogger(Thread):
             return True
         
     def _sendConfirm(self, sock):
-        sock.send(pickle.dumps(("Ok")))
+        resp = RegisterResponseMes()
+        resp.setField('Status', True)
+        send_message(resp, sock=sock)
         
     def _sendReject(self, sock):
-        sock.send(pickle.dumps(("Fail")))
+        resp = RegisterResponseMes()
+        resp.setField('Status', False)
+        send_message(resp, sock=sock)
 
 
 def update_files(agent, new_files):
@@ -172,19 +170,12 @@ def run_monitoring():
 
 
 def main():
-    #p = Process(target=run_center)
-    #p.start() 
-
-    logger = AgentLogger("127.0.0.1", 8080)
-    logger.start()
+    secretary = AgentSecretary("127.0.0.1", 8080)
+    secretary.start()
     
     run_monitoring()
     
 
 if __name__ == "__main__":
-    logging.basicConfig(datefmt='[%H:%M:%S]')
-    log = logging.getLogger("CenterLogger")
-    log.setLevel(logging.INFO)
-    log.info("Logger created")
 
     main()

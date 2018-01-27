@@ -1,5 +1,5 @@
 import sqlite3
-import logging
+from logger import log
 
 
 MONITORING_DB_NAME = "agent_monitoring.db"
@@ -57,7 +57,7 @@ def get_file(table, dirname, filename):
         c = conn.cursor()
         
         c.execute("SELECT content FROM %s WHERE dirname = '%s' AND filename = '%s'" % (table, dirname, filename))
-        responce = c.fetchall()
+        response = c.fetchall()
         conn.close()
 
     except Exception as e:
@@ -65,7 +65,7 @@ def get_file(table, dirname, filename):
     finally:
         conn.close()
 
-    return responce
+    return response
 
 
 def get_full(table):
@@ -76,7 +76,7 @@ def get_full(table):
         c = conn.cursor()
         
         c.execute("SELECT dirname, filename, content FROM %s" % (table))
-        responce = c.fetchall()
+        response = c.fetchall()
         conn.close()
 
     except Exception as e:
@@ -84,7 +84,7 @@ def get_full(table):
     finally:
         conn.close()
 
-    return responce
+    return response
 
 
 ### LAST ###
@@ -147,9 +147,3 @@ def update_last_requested_from_last_version():
         print("Failed for update_last_requested: %s: %s " % (type(e).__name__, e))
     finally:
         conn.close()
-    
-
-logging.basicConfig(datefmt='[%H:%M:%S]')
-log = logging.getLogger("StorageLogger")
-log.setLevel(logging.INFO)
-log.info("Logger created")

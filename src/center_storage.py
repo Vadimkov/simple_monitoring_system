@@ -1,5 +1,5 @@
 import sqlite3
-import logging
+from logger import log
 
 
 MONITORING_DB_NAME = "center_monitoring.db"
@@ -51,7 +51,7 @@ def get_full():
         c = conn.cursor()
         
         c.execute("SELECT agentname, dirname, filename, content FROM %s" % (table))
-        responce = c.fetchall()
+        response = c.fetchall()
         conn.close()
 
     except Exception as e:
@@ -59,10 +59,6 @@ def get_full():
     finally:
         conn.close()
 
-    return responce
+    return response
 
 
-logging.basicConfig(datefmt='[%H:%M:%S]')
-log = logging.getLogger("StorageLogger")
-log.setLevel(logging.DEBUG)
-log.info("Logger created")
