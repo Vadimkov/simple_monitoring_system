@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3, re
 from logger import log
 
 
@@ -14,9 +14,15 @@ def create_monitoring_db():
     c = conn.cursor()
     c.execute("SELECT name FROM sqlite_master WHERE type='table'")
     tables = c.fetchall()
+    log.info("Detected tables: %s" % (str(tables)))
 
-    if (FILES_TABLE_NAME,) not in tables:
-        c.execute("CREATE TABLE %s (agentname text, dirname text, filename text, content text)" % (FILES_TABLE_NAME))
+    try:
+        if (FILES_TABLE_NAME,) not in tables:
+            log.info("Create table")
+            c.execute("CREATE TABLE %s (agentname text, dirname text, filename text, content text)" % (FILES_TABLE_NAME))
+    except Exception as e:
+        print("Failed for %s (create table): %s: %s " % (table, type(e).__name__, e))
+    
 
     conn.close()
 
@@ -45,6 +51,7 @@ def update_file(agentname, dirname, filename, content):
 def get_full():
     log.debug("Get full")
     table = FILES_TABLE_NAME
+    response = None
 
     try:
         conn = sqlite3.connect(MONITORING_DB_NAME)
@@ -61,4 +68,17 @@ def get_full():
 
     return response
 
+def get_records_by_type(record_type):
+    return get_full()
+
+def get_matched_records(record_type, expression):
+    report = []
+
+    records_by_type = get_records_by_type(record_type)
+    pattern = re.compile(expression)
+    for record in records_by_type:
+        if pattern.findall(record[3]):
+            report.append(record)
+
+    return report
 

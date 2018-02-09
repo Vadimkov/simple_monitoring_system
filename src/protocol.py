@@ -1,10 +1,16 @@
-import json, pickle
+import json, pickle, struct
 from socket import *
 from logger import log
 
 
 def get_message(conn):
-    data = json.loads(pickle.loads(conn.recv(1024)))
+    size = read_lenght(conn)
+    data = read(conn, size)
+    frmt = "=%ds" % size
+    data = struct.unpack(frmt, data)
+    data = data[0]
+
+    data = json.loads(data)
     log.debug("data:\n" + str(data))
     mes = None
     
@@ -20,12 +26,42 @@ def get_message(conn):
     elif data['MessageType'] == 'DiffResponseMes':
         mes = DiffResponseMes()
         mes.setField('DiffUpdate', data['DiffUpdate'])
+    elif data['MessageType'] == 'ExpressionRequestMes':
+        mes = ExpressionRequestMes()
+        mes.setField('Expression', data['Expression'])
+        mes.setField('Type', data['Type'])
+    elif data['MessageType'] == 'ExpressionsLenghtMes':
+        mes = ExpressionsLenghtMes()
+        mes.setField('Lenght', data['Lenght'])
+    elif data['MessageType'] == 'ExpressionUnitMes':
+        mes = ExpressionUnitMes()
+        mes.setField('Agent', data['Agent'])
+        mes.setField('Space', data['Space'])
+        mes.setField('Object', data['Object'])
+        mes.setField('String', data['String'])
+    elif data['MessageType'] == 'ExpressionStatusMes':
+        mes = ExpressionStatusMes()
     else:
         raise UnsupportedMessageTypeException(data['MessageType']) 
     
     log.debug("Got message:\n" + str(mes))
 
     return mes
+
+def read_lenght(sock):
+    data = read(sock, (4,))
+    return struct.unpack('=I', data)
+
+def read(sock, size):
+    data = bytes('', 'utf-8')
+    size = size[0]
+    while len(data) < size:
+        dataTemp = sock.recv(size - len(data))
+        data += dataTemp
+        if dataTemp == '':
+           raise RuntimeError("socket connection broken")
+
+    return data 
 
 def send_message_by_address(mes, addr):
     sock = socket(AF_INET, SOCK_STREAM)
@@ -34,8 +70,20 @@ def send_message_by_address(mes, addr):
 
 def send_message(mes, sock):
     log.info("Sent message:\n" + str(mes))
-    sock.send(pickle.dumps(mes._toJson()))
+
+    frmt = "=%ds" % len(bytes(mes._toJson(),'utf-8'))
+    packedMes = struct.pack(frmt, bytes(mes._toJson(), 'utf-8'))
+    packedHed = struct.pack("=I", len(packedMes))
+
+    send(packedHed, sock)
+    send(packedMes, sock)
     return sock
+
+def send(mes, sock):
+    sent = 0
+    log.debug("Send: %s)" % (str(mes)))
+    while sent < len(mes):
+        sent += sock.send(mes[sent:])
 
 
 class Message:
@@ -99,6 +147,40 @@ class DiffResponseMes(Message):
         self.messageBody['DiffUpdate'] = None
 
 
+class ExpressionRequestMes(Message):
+
+    def __init__(self):
+        self.messageBody = {}
+        self.messageBody['MessageType']     =   'ExpressionRequestMes'
+        self.messageBody['Expression']      =   None
+        self.messageBody['Type']            =   None
+
+
+class ExpressionsLenghtMes(Message):
+
+    def __init__(self):
+        self.messageBody = {}
+        self.messageBody['MessageType']     =   'ExpressionsLenghtMes'
+        self.messageBody['Lenght']          =   None
+
+
+class ExpressionUnitMes(Message):
+
+    def __init__(self):
+        self.messageBody = {}
+        self.messageBody['MessageType']     =   'ExpressionUnitMes'
+        self.messageBody['Agent']           =   None
+        self.messageBody['Space']           =   None
+        self.messageBody['Object']          =   None
+        self.messageBody['String']          =   None
+
+class ExpressionStatusMes(Message):
+
+    def __init__(self):
+        self.messageBody = {}
+        self.messageBody['MessageType']     =   'ExpressionStatusMes'
+
+
 # Exceptions
 class ProtocolException(Exception):
 
@@ -122,3 +204,4 @@ class UnsupportedMessageTypeException(ProtocolException):
 
     def __init__(self, messageType):
         super(UnsupportedMessageTypeException, self).__init__("Message type '%s' is incorrect" % (messageType))
+

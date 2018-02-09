@@ -24,7 +24,7 @@ def handleDiffRequest(sock):
 class MonitoringAgent():
  
     def __init__(self):
-        self.thisHost = "127.0.0.1"
+        self.thisHost = "localhost"
         self.thisPort = 8085 
         
     def _registerToCenter(self, centerHost, centerPort):
@@ -58,4 +58,4 @@ class MonitoringAgent():
 def run_agent():
     print("RUN AGENT!!!!!!!!\n\n\n")
     agent = MonitoringAgent()
-    agent.run("127.0.0.1", 8080)
+    agent.run("localhost", 8080)

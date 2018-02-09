@@ -10,11 +10,6 @@ from logger import *
 active_agents = []
 
 
-def parse_file_update(data):
-    files = pickle.loads(data)
-    return files[1:]
-
-
 class Agent(object):
     
     def __init__(self, address, port):
@@ -95,18 +90,52 @@ class AgentSecretary(Thread):
 
         while True:
             (conn, addr) = agent_logger_socket.accept()
-            log.info("Connected agent from %s" % (str(addr)))
+            log.info("Connected from %s" % (str(addr)))
             mes = get_message(conn)
-            
-            agent = self._agentParse(mes)
-            if self._registerAgent(agent):
-                self._sendConfirm(conn)
-            else:
-                self._sendReject(conn)
+        
+            self._handleRequest(mes, conn)    
                 
             conn.close()
         agent_logger_socket.close()
 
+    def _handleRequest(self, req, sock):
+        if req.getType() == "RegisterRequestMes":
+            self._handleRegisterRequest(req, sock)
+        elif  req.getType() == "ExpressionRequestMes":
+            self._handleExpressionRequest(req, sock)
+        else:
+            raise UnsupportedMessageTypeException(req.getType())
+
+    def _handleRegisterRequest(self, registerRequest, sock):
+        agent = self._agentParse(registerRequest)
+        if self._registerAgent(agent):
+            self._sendConfirm(sock)
+        else:
+            self._sendReject(sock)
+
+    def _handleExpressionRequest(self, exprRequest, sock):
+        expr = exprRequest.getField('Expression')
+        object_type = exprRequest.getField('Type')
+        
+        report = get_matched_records(object_type, expr)
+
+        try:
+            expressionsLenghtMes = ExpressionsLenghtMes()
+            expressionsLenghtMes.setField('Lenght', len(report))
+            send_message(expressionsLenghtMes, sock)
+
+            for record in report:
+                uMes = ExpressionUnitMes()
+                uMes.setField('Agent', record[0])
+                uMes.setField('Space', record[1])
+                uMes.setField('Object', record[2])
+                uMes.setField('String', record[3])
+
+                send_message(uMes, sock)
+        except Exception as e:
+            log.error("Can't send report: %s" % (e))
+        finally:
+            sock.close()
 
     def _agentParse(self, regRequest):
         address = regRequest.getField('Host')
@@ -132,6 +161,10 @@ class AgentSecretary(Thread):
         send_message(resp, sock=sock)
 
 
+def get_matches(expr, object_type):
+    pass
+
+
 def update_files(agent, new_files):
     log.info("Try to update for files agent '%s' files:\n%s" % (agent, new_files))
     log.info("Type: %s" % (type(new_files)))
@@ -152,9 +185,9 @@ def update_files(agent, new_files):
     log.info("Files for agent '%s' has been updated." % (agent))
 
 
-def run_center():
-    server = TbFindCenter('localhost', 8080)
-    server.run()
+def parse_file_update(data):
+    files = pickle.loads(data)
+    return files[1:]
 
 
 def run_monitoring():
@@ -170,11 +203,10 @@ def run_monitoring():
 
 
 def main():
-    secretary = AgentSecretary("127.0.0.1", 8080)
+    secretary = AgentSecretary("localhost", 8080)
     secretary.start()
     
     run_monitoring()
-    
 
 if __name__ == "__main__":
 
