@@ -9,6 +9,9 @@ from protocol import *
 from logger import *
 
 active_agents = []
+failed_attempts = {}  # key - agent name, value - failed attempts to connect
+
+NUMBER_ATTEMPTS = 3
 
 
 class Agent(object):
@@ -185,11 +188,28 @@ def run_monitoring():
 
     while True:
         for agent in active_agents:
-            log.info("Request last files from %s" % agent)
-            new_files = agent.get_last_version()
-            update_files(agent, new_files)
-            log.info("Finish with %s" % agent)
+            try:
+                log.info("Request last files from %s" % agent)
+                new_files = agent.get_last_version()
+                update_files(agent, new_files)
+                log.info("Finish with %s" % agent)
+            except ConnectionRefusedError as e:
+                handle_failed_connection(agent)
         time.sleep(5)
+
+
+def handle_failed_connection(agent):
+    if str(agent) not in failed_attempts:
+        failed_attempts[str(agent)] = 1
+    else:
+        failed_attempts[str(agent)] += 1
+
+    log.warning("Failed '%s' attempts connect to '%s'"
+                % (failed_attempts[str(agent)], str(agent)))
+
+    if failed_attempts[str(agent)] >= NUMBER_ATTEMPTS:
+        log.error("Remove agent '%s' from list active agents" % (str(agent)))
+        active_agents.remove(agent)
 
 
 def main():
@@ -198,6 +218,6 @@ def main():
 
     run_monitoring()
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     main()

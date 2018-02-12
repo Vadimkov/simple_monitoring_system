@@ -66,6 +66,7 @@ def main():
     report = get_expression_report(sock)
     print_report(report)
 
+
 if __name__ == "__main__":
     log.setLevel(logging.ERROR)
     main()
