@@ -18,8 +18,8 @@ def configure():
 
 def send_expression_request(expr, object_type):
     req = ExpressionRequestMes()
-    req.setField('Expression', expr)
-    req.setField('Type', object_type)
+    req.set_field('Expression', expr)
+    req.set_field('Type', object_type)
 
     sock = send_message_by_address(req, (addr, port))
     return sock
@@ -27,14 +27,14 @@ def send_expression_request(expr, object_type):
 
 def get_expression_report(sock):
     lenghtResponce = get_message(sock)
-    lenght = lenghtResponce.getField('Lenght')
+    lenght = lenghtResponce.get_field('Lenght')
 
     units = []
 
     for i in range(lenght):
         unit = get_message(sock)
-        units.append((unit.getField('Agent'), unit.getField('Space'),
-                      unit.getField('Object'), unit.getField('String')))
+        units.append((unit.get_field('Agent'), unit.get_field('Space'),
+                      unit.get_field('Object'), unit.get_field('String')))
 
     return units
 

@@ -4,46 +4,46 @@ from protocol import *
 from socket import *
 
 
-def handleRequest(mes, sock):
-    if mes.getType() == 'DiffRequestMes':
-        handleDiffRequest(sock)
+def handle_request(mes, sock):
+    if mes.get_type() == 'DiffRequestMes':
+        handle_diff_request(sock)
     else:
-        raise UnsupportedMessageTypeException(mes.getType())
+        raise UnsupportedMessageTypeException(mes.get_type())
 
 
-def handleDiffRequest(sock):
+def handle_diff_request(sock):
     response = get_full_diff()
     update_last_requested_from_last_version()
 
     log.warning("Try to write diff: %s" % (str(response)))
 
     diffResponseMes = DiffResponseMes()
-    diffResponseMes.setField('DiffUpdate', response)
+    diffResponseMes.set_field('DiffUpdate', response)
     send_message(diffResponseMes, sock)
 
 
 class MonitoringAgent():
 
     def __init__(self):
-        self.thisHost = "localhost"
-        self.thisPort = 8085
+        self.this_host = "localhost"
+        self.this_port = 8085
 
-    def _registerToCenter(self, centerHost, centerPort):
+    def _register_to_center(self, centerHost, centerPort):
         regRequest = RegisterRequestMes()
-        regRequest.setField('Host', self.thisHost)
-        regRequest.setField('Port', self.thisPort)
+        regRequest.set_field('Host', self.this_host)
+        regRequest.set_field('Port', self.this_port)
         sock = send_message_by_address(regRequest, (centerHost, centerPort))
         regResponse = get_message(sock)
 
-        if regResponse.getField('Status'):
+        if regResponse.get_field('Status'):
             log.info("Registration passed")
         else:
             log.error("Registration failed")
 
-    def run(self, centerHost, centerPort):
-        self._registerToCenter(centerHost, centerPort)
+    def run(self, center_host, center_port):
+        self._register_to_center(center_host, center_port)
         sock = socket(AF_INET, SOCK_STREAM)
-        sock.bind((self.thisHost, self.thisPort))
+        sock.bind((self.this_host, self.this_port))
         sock.listen(5)
 
         log.info("Agent has been started!")
@@ -53,7 +53,7 @@ class MonitoringAgent():
             log.info("Connection from '%s'" % (str(addr)))
 
             mes = get_message(conn)
-            handleRequest(mes, conn)
+            handle_request(mes, conn)
 
 
 def run_agent():

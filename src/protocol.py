@@ -18,29 +18,29 @@ def get_message(conn):
 
     if data['MessageType'] == 'RegisterRequestMes':
         mes = RegisterRequestMes()
-        mes.setField('Host', data['Host'])
-        mes.setField('Port', data['Port'])
+        mes.set_field('Host', data['Host'])
+        mes.set_field('Port', data['Port'])
     elif data['MessageType'] == 'RegisterResponseMes':
         mes = RegisterResponseMes()
-        mes.setField('Status', data['Status'])
+        mes.set_field('Status', data['Status'])
     elif data['MessageType'] == 'DiffRequestMes':
         mes = DiffRequestMes()
     elif data['MessageType'] == 'DiffResponseMes':
         mes = DiffResponseMes()
-        mes.setField('DiffUpdate', data['DiffUpdate'])
+        mes.set_field('DiffUpdate', data['DiffUpdate'])
     elif data['MessageType'] == 'ExpressionRequestMes':
         mes = ExpressionRequestMes()
-        mes.setField('Expression', data['Expression'])
-        mes.setField('Type', data['Type'])
+        mes.set_field('Expression', data['Expression'])
+        mes.set_field('Type', data['Type'])
     elif data['MessageType'] == 'ExpressionsLenghtMes':
         mes = ExpressionsLenghtMes()
-        mes.setField('Lenght', data['Lenght'])
+        mes.set_field('Lenght', data['Lenght'])
     elif data['MessageType'] == 'ExpressionUnitMes':
         mes = ExpressionUnitMes()
-        mes.setField('Agent', data['Agent'])
-        mes.setField('Space', data['Space'])
-        mes.setField('Object', data['Object'])
-        mes.setField('String', data['String'])
+        mes.set_field('Agent', data['Agent'])
+        mes.set_field('Space', data['Space'])
+        mes.set_field('Object', data['Object'])
+        mes.set_field('String', data['String'])
     elif data['MessageType'] == 'ExpressionStatusMes':
         mes = ExpressionStatusMes()
     else:
@@ -53,7 +53,7 @@ def get_message(conn):
 
 def read_lenght(sock):
     data = read(sock, (4,))
-    return struct.unpack(' = I', data)
+    return struct.unpack('=I', data)
 
 
 def read(sock, size):
@@ -77,8 +77,8 @@ def send_message_by_address(mes, addr):
 def send_message(mes, sock):
     log.info("Sent message:\n" + str(mes))
 
-    frmt = "=%ds" % len(bytes(mes._toJson(), 'utf-8'))
-    packedMes = struct.pack(frmt, bytes(mes._toJson(), 'utf-8'))
+    frmt = "=%ds" % len(bytes(mes._to_json(), 'utf-8'))
+    packedMes = struct.pack(frmt, bytes(mes._to_json(), 'utf-8'))
     packedHed = struct.pack("=I", len(packedMes))
 
     send(packedHed, sock)
@@ -101,10 +101,10 @@ class Message:
     def __str__(self):
         return json.dumps(self.messageBody, indent=4)
 
-    def _toJson(self):
+    def _to_json(self):
         return json.dumps(self.messageBody)
 
-    def setField(self, field, value):
+    def set_field(self, field, value):
         if field not in self.messageBody:
             raise UndefinedFieldException(self, field)
         if field == 'MessageType':
@@ -112,14 +112,14 @@ class Message:
 
         self.messageBody[field] = value
 
-    def getField(self, field):
+    def get_field(self, field):
         if field not in self.messageBody:
             raise UndefinedFieldException(self, field)
 
         return self.messageBody[field]
 
-    def getType(self):
-        return self.getField('MessageType')
+    def get_type(self):
+        return self.get_field('MessageType')
 
 
 class RegisterRequestMes(Message):

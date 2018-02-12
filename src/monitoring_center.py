@@ -51,7 +51,7 @@ class Agent(object):
 
         return new_files
 
-    def getLastVersion(self):
+    def get_last_version(self):
         new_files = []
         log.info("send last version request")
 
@@ -60,20 +60,7 @@ class Agent(object):
                                        (self.address, self.port))
         diffResponseMes = get_message(sock)
 
-        return diffResponseMes.getField('DiffUpdate')
-
-
-class ActiveAgents(object):
-
-    def __init__(self):
-        self._activeAgents = []
-
-    def addAgent(self, agent):
-        if agent not in self._activeAgents:
-            self._activeAgents.append(agent)
-            return True
-        else:
-            return False
+        return diffResponseMes.get_field('DiffUpdate')
 
 
 class AgentSecretary(Thread):
@@ -95,43 +82,43 @@ class AgentSecretary(Thread):
             log.info("Connected from %s" % (str(addr)))
             mes = get_message(conn)
 
-            self._handleRequest(mes, conn)
+            self._handle_request(mes, conn)
 
             conn.close()
         agent_logger_socket.close()
 
-    def _handleRequest(self, req, sock):
-        if req.getType() == "RegisterRequestMes":
-            self._handleRegisterRequest(req, sock)
-        elif req.getType() == "ExpressionRequestMes":
+    def _handle_request(self, req, sock):
+        if req.get_type() == "RegisterRequestMes":
+            self._handle_register_request(req, sock)
+        elif req.get_type() == "ExpressionRequestMes":
             self._handleExpressionRequest(req, sock)
         else:
-            raise UnsupportedMessageTypeException(req.getType())
+            raise UnsupportedMessageTypeException(req.get_type())
 
-    def _handleRegisterRequest(self, registerRequest, sock):
-        agent = self._agentParse(registerRequest)
-        if self._registerAgent(agent):
-            self._sendConfirm(sock)
+    def _handle_register_request(self, registerRequest, sock):
+        agent = self._agent_parse(registerRequest)
+        if self._register_agent(agent):
+            self._send_confirm(sock)
         else:
-            self._sendReject(sock)
+            self._send_reject(sock)
 
     def _handleExpressionRequest(self, exprRequest, sock):
-        expr = exprRequest.getField('Expression')
-        object_type = exprRequest.getField('Type')
+        expr = exprRequest.get_field('Expression')
+        object_type = exprRequest.get_field('Type')
 
         report = get_matched_records(object_type, expr)
 
         try:
             expressionsLenghtMes = ExpressionsLenghtMes()
-            expressionsLenghtMes.setField('Lenght', len(report))
+            expressionsLenghtMes.set_field('Lenght', len(report))
             send_message(expressionsLenghtMes, sock)
 
             for record in report:
                 uMes = ExpressionUnitMes()
-                uMes.setField('Agent', record[0])
-                uMes.setField('Space', record[1])
-                uMes.setField('Object', record[2])
-                uMes.setField('String', record[3])
+                uMes.set_field('Agent', record[0])
+                uMes.set_field('Space', record[1])
+                uMes.set_field('Object', record[2])
+                uMes.set_field('String', record[3])
 
                 send_message(uMes, sock)
         except Exception as e:
@@ -139,12 +126,12 @@ class AgentSecretary(Thread):
         finally:
             sock.close()
 
-    def _agentParse(self, regRequest):
-        address = regRequest.getField('Host')
-        port = regRequest.getField('Port')
+    def _agent_parse(self, regRequest):
+        address = regRequest.get_field('Host')
+        port = regRequest.get_field('Port')
         return Agent(address, port)
 
-    def _registerAgent(self, agent):
+    def _register_agent(self, agent):
         if agent in active_agents:
             log.warning("Agent %s already registered" % (str(agent)))
             return False
@@ -152,14 +139,14 @@ class AgentSecretary(Thread):
             active_agents.append(agent)
             return True
 
-    def _sendConfirm(self, sock):
+    def _send_confirm(self, sock):
         resp = RegisterResponseMes()
-        resp.setField('Status', True)
+        resp.set_field('Status', True)
         send_message(resp, sock=sock)
 
-    def _sendReject(self, sock):
+    def _send_reject(self, sock):
         resp = RegisterResponseMes()
-        resp.setField('Status', False)
+        resp.set_field('Status', False)
         send_message(resp, sock=sock)
 
 
@@ -199,7 +186,7 @@ def run_monitoring():
     while True:
         for agent in active_agents:
             log.info("Request last files from %s" % agent)
-            new_files = agent.getLastVersion()
+            new_files = agent.get_last_version()
             update_files(agent, new_files)
             log.info("Finish with %s" % agent)
         time.sleep(5)
