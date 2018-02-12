@@ -1,7 +1,6 @@
 import argparse
 from socket import *
 from protocol import *
-from time import sleep
 
 
 addr = "localhost"
@@ -34,7 +33,8 @@ def get_expression_report(sock):
 
     for i in range(lenght):
         unit = get_message(sock)
-        units.append((unit.getField('Agent'), unit.getField('Space'), unit.getField('Object'), unit.getField('String')))
+        units.append((unit.getField('Agent'), unit.getField('Space'),
+                      unit.getField('Object'), unit.getField('String')))
 
     return units
 
@@ -42,7 +42,7 @@ def get_expression_report(sock):
 def main():
     args = configure()
     print("Expressin:", args["expression"])
-    print("Type:", args["type"]) 
+    print("Type:", args["type"])
 
     sock = send_expression_request(args["expression"], args["type"])
     report = get_expression_report(sock)

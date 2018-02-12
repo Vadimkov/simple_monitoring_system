@@ -1,4 +1,5 @@
-import sqlite3, re
+import sqlite3
+import re
 from logger import log
 
 
@@ -10,7 +11,7 @@ def create_monitoring_db():
     log.info("Create DB")
 
     conn = sqlite3.connect(MONITORING_DB_NAME)
-    
+
     c = conn.cursor()
     c.execute("SELECT name FROM sqlite_master WHERE type='table'")
     tables = c.fetchall()
@@ -19,31 +20,46 @@ def create_monitoring_db():
     try:
         if (FILES_TABLE_NAME,) not in tables:
             log.info("Create table")
-            c.execute("CREATE TABLE %s (agentname text, dirname text, filename text, content text)" % (FILES_TABLE_NAME))
+            c.execute("CREATE TABLE %s "
+                      "(agentname text, dirname text, "
+                      "filename text, content text)"
+                      % (FILES_TABLE_NAME))
     except Exception as e:
-        print("Failed for %s (create table): %s: %s " % (table, type(e).__name__, e))
-    
+        print("Failed for %s (create table): %s: %s "
+              % (FILES_TABLE_NAME, type(e).__name__, e))
 
     conn.close()
 
 
 def update_file(agentname, dirname, filename, content):
-    log.debug("Update file %s for %s from dir %s:\n%s" % (filename, agentname, dirname, content))
+    log.debug("Update file %s for %s from dir %s:\n%s"
+              % (filename, agentname, dirname, content))
     table = FILES_TABLE_NAME
 
     try:
         conn = sqlite3.connect(MONITORING_DB_NAME)
         c = conn.cursor()
-        
-        c.execute("SELECT * FROM %s WHERE dirname = '%s' AND filename = '%s' AND agentname = '%s'" % (table, dirname, filename, agentname))
+
+        c.execute("SELECT * FROM %s "
+                  "WHERE dirname = '%s' "
+                  "AND filename = '%s' "
+                  "AND agentname = '%s' "
+                  % (table, dirname, filename, agentname))
+
         if not c.fetchall():
-            c.execute("INSERT INTO %s VALUES ('%s', '%s', '%s', '%s')" % (table, agentname, dirname, filename, content))
+            c.execute("INSERT INTO %s VALUES ('%s', '%s', '%s', '%s')"
+                      % (table, agentname, dirname, filename, content))
         else:
-            c.execute("UPDATE %s SET content = '%s' WHERE dirname = '%s' AND filename = '%s' AND agentname = '%s'" % (table, content, dirname, filename, agentname))
-            
+            c.execute("UPDATE %s SET content = '%s' "
+                      "WHERE dirname = '%s' "
+                      "AND filename = '%s' "
+                      "AND agentname = '%s' "
+                      % (table, content, dirname, filename, agentname))
+
         conn.commit()
     except Exception as e:
-        print("Failed for %s (update_file): %s: %s " % (table, type(e).__name__, e))
+        print("Failed for %s (update_file): %s: %s "
+              % (table, type(e).__name__, e))
     finally:
         conn.close()
 
@@ -56,8 +72,9 @@ def get_full():
     try:
         conn = sqlite3.connect(MONITORING_DB_NAME)
         c = conn.cursor()
-        
-        c.execute("SELECT agentname, dirname, filename, content FROM %s" % (table))
+
+        c.execute("SELECT agentname, dirname, filename, content FROM %s"
+                  % (table))
         response = c.fetchall()
         conn.close()
 
@@ -68,8 +85,10 @@ def get_full():
 
     return response
 
+
 def get_records_by_type(record_type):
     return get_full()
+
 
 def get_matched_records(record_type, expression):
     report = []
@@ -81,4 +100,3 @@ def get_matched_records(record_type, expression):
             report.append(record)
 
     return report
-

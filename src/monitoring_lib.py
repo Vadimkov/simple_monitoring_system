@@ -4,11 +4,12 @@ from agent_storage import *
 from logger import log
 import os
 
+
 def check_dir(dirname):
     log.info("Check dir %s" % (dirname))
     filenames = os.listdir(dirname)
     log.debug("In the %s detected:\n%s" % (dirname, str(filenames)))
-    
+
     for filename in filenames:
         log.debug("Check file %s" % (filename))
 
@@ -26,14 +27,15 @@ def check_dir(dirname):
         if currentFileContent != lastRequestedFileContent:
             log.info("Update file %s" % (filepath))
             update_diff_file(dirname, filename, currentFileContent)
-        
+
         update_last_version_file(dirname, filename, currentFileContent)
+
 
 def run_monitoring(dirnames):
     # dirnames = ["monitoring"]
     threadPool = ThreadPoolExecutor(5)
     create_monitoring_db()
-    
+
     while True:
         for dirname in dirnames:
             threadPool.submit(check_dir, dirname)

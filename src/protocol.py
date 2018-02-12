@@ -1,4 +1,6 @@
-import json, pickle, struct
+import json
+import pickle
+import struct
 from socket import *
 from logger import log
 
@@ -13,7 +15,7 @@ def get_message(conn):
     data = json.loads(data)
     log.debug("data:\n" + str(data))
     mes = None
-    
+
     if data['MessageType'] == 'RegisterRequestMes':
         mes = RegisterRequestMes()
         mes.setField('Host', data['Host'])
@@ -42,15 +44,17 @@ def get_message(conn):
     elif data['MessageType'] == 'ExpressionStatusMes':
         mes = ExpressionStatusMes()
     else:
-        raise UnsupportedMessageTypeException(data['MessageType']) 
-    
+        raise UnsupportedMessageTypeException(data['MessageType'])
+
     log.debug("Got message:\n" + str(mes))
 
     return mes
 
+
 def read_lenght(sock):
     data = read(sock, (4,))
-    return struct.unpack('=I', data)
+    return struct.unpack(' = I', data)
+
 
 def read(sock, size):
     data = bytes('', 'utf-8')
@@ -59,25 +63,28 @@ def read(sock, size):
         dataTemp = sock.recv(size - len(data))
         data += dataTemp
         if dataTemp == '':
-           raise RuntimeError("socket connection broken")
+            raise RuntimeError("socket connection broken")
 
-    return data 
+    return data
+
 
 def send_message_by_address(mes, addr):
     sock = socket(AF_INET, SOCK_STREAM)
     sock.connect(addr)
     return send_message(mes, sock)
 
+
 def send_message(mes, sock):
     log.info("Sent message:\n" + str(mes))
 
-    frmt = "=%ds" % len(bytes(mes._toJson(),'utf-8'))
+    frmt = "=%ds" % len(bytes(mes._toJson(), 'utf-8'))
     packedMes = struct.pack(frmt, bytes(mes._toJson(), 'utf-8'))
     packedHed = struct.pack("=I", len(packedMes))
 
     send(packedHed, sock)
     send(packedMes, sock)
     return sock
+
 
 def send(mes, sock):
     sent = 0
@@ -87,7 +94,7 @@ def send(mes, sock):
 
 
 class Message:
-    
+
     def __init__(self):
         self.messageBody = {}
 
@@ -151,34 +158,35 @@ class ExpressionRequestMes(Message):
 
     def __init__(self):
         self.messageBody = {}
-        self.messageBody['MessageType']     =   'ExpressionRequestMes'
-        self.messageBody['Expression']      =   None
-        self.messageBody['Type']            =   None
+        self.messageBody['MessageType'] = 'ExpressionRequestMes'
+        self.messageBody['Expression'] = None
+        self.messageBody['Type'] = None
 
 
 class ExpressionsLenghtMes(Message):
 
     def __init__(self):
         self.messageBody = {}
-        self.messageBody['MessageType']     =   'ExpressionsLenghtMes'
-        self.messageBody['Lenght']          =   None
+        self.messageBody['MessageType'] = 'ExpressionsLenghtMes'
+        self.messageBody['Lenght'] = None
 
 
 class ExpressionUnitMes(Message):
 
     def __init__(self):
         self.messageBody = {}
-        self.messageBody['MessageType']     =   'ExpressionUnitMes'
-        self.messageBody['Agent']           =   None
-        self.messageBody['Space']           =   None
-        self.messageBody['Object']          =   None
-        self.messageBody['String']          =   None
+        self.messageBody['MessageType'] = 'ExpressionUnitMes'
+        self.messageBody['Agent'] = None
+        self.messageBody['Space'] = None
+        self.messageBody['Object'] = None
+        self.messageBody['String'] = None
+
 
 class ExpressionStatusMes(Message):
 
     def __init__(self):
         self.messageBody = {}
-        self.messageBody['MessageType']     =   'ExpressionStatusMes'
+        self.messageBody['MessageType'] = 'ExpressionStatusMes'
 
 
 # Exceptions
@@ -191,17 +199,20 @@ class ProtocolException(Exception):
 class ChangeMessageTypeException(ProtocolException):
 
     def __init__(self):
-        super(ChangeMessageTypeException, self).__init__("You can't change message type!")
+        super(ChangeMessageTypeException,
+              self).__init__("You can't change message type!")
 
 
 class UndefinedFieldException(ProtocolException):
 
     def __init__(self, message, field):
-        super(UndefinedFieldException, self).__init__("Field '%s' don't exist in the message '%s'" % (field, type(message)))
+        super(UndefinedFieldException, self).__init__(
+              "Field '%s' don't exist in the message '%s'"
+              % (field, type(message)))
 
 
 class UnsupportedMessageTypeException(ProtocolException):
 
     def __init__(self, messageType):
-        super(UnsupportedMessageTypeException, self).__init__("Message type '%s' is incorrect" % (messageType))
-
+        super(UnsupportedMessageTypeException, self).__init__(
+              "Message type '%s' is incorrect" % (messageType))

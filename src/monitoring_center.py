@@ -1,4 +1,5 @@
-import asyncore, pickle
+import asyncore
+import pickle
 import time
 import logging
 from socket import *
@@ -11,7 +12,7 @@ active_agents = []
 
 
 class Agent(object):
-    
+
     def __init__(self, address, port):
         self.address = address
         self.port = port
@@ -28,7 +29,7 @@ class Agent(object):
 
     def _send_last_version_req(self):
         diffReqMes = DiffRequestMes()
-        
+
         self._agent_socket = socket(AF_INET, SOCK_STREAM)
         self._agent_socket.connect((self.address, self.port))
         self._agent_socket.send(request_message)
@@ -52,17 +53,18 @@ class Agent(object):
 
     def getLastVersion(self):
         new_files = []
-#        try:
         log.info("send last version request")
+
         diffRequestMes = DiffRequestMes()
-        diffResponseMes = get_message(send_message_by_address(diffRequestMes, (self.address, self.port)))
- #       except Exception as e:
-        #log.error("Failed agent logger: %s: %s " % (type(e).__name__, e))
+        sock = send_message_by_address(diffRequestMes,
+                                       (self.address, self.port))
+        diffResponseMes = get_message(sock)
+
         return diffResponseMes.getField('DiffUpdate')
-    
+
 
 class ActiveAgents(object):
-    
+
     def __init__(self):
         self._activeAgents = []
 
@@ -80,7 +82,7 @@ class AgentSecretary(Thread):
         super(AgentSecretary, self).__init__()
         self.host = host
         self.port = port
-    
+
     def run(self):
         agent_logger_socket = socket(AF_INET, SOCK_STREAM)
         agent_logger_socket.bind((self.host, self.port))
@@ -92,16 +94,16 @@ class AgentSecretary(Thread):
             (conn, addr) = agent_logger_socket.accept()
             log.info("Connected from %s" % (str(addr)))
             mes = get_message(conn)
-        
-            self._handleRequest(mes, conn)    
-                
+
+            self._handleRequest(mes, conn)
+
             conn.close()
         agent_logger_socket.close()
 
     def _handleRequest(self, req, sock):
         if req.getType() == "RegisterRequestMes":
             self._handleRegisterRequest(req, sock)
-        elif  req.getType() == "ExpressionRequestMes":
+        elif req.getType() == "ExpressionRequestMes":
             self._handleExpressionRequest(req, sock)
         else:
             raise UnsupportedMessageTypeException(req.getType())
@@ -116,7 +118,7 @@ class AgentSecretary(Thread):
     def _handleExpressionRequest(self, exprRequest, sock):
         expr = exprRequest.getField('Expression')
         object_type = exprRequest.getField('Type')
-        
+
         report = get_matched_records(object_type, expr)
 
         try:
@@ -149,12 +151,12 @@ class AgentSecretary(Thread):
         else:
             active_agents.append(agent)
             return True
-        
+
     def _sendConfirm(self, sock):
         resp = RegisterResponseMes()
         resp.setField('Status', True)
         send_message(resp, sock=sock)
-        
+
     def _sendReject(self, sock):
         resp = RegisterResponseMes()
         resp.setField('Status', False)
@@ -166,7 +168,8 @@ def get_matches(expr, object_type):
 
 
 def update_files(agent, new_files):
-    log.info("Try to update for files agent '%s' files:\n%s" % (agent, new_files))
+    log.info("Try to update for files agent '%s' files:\n%s"
+             % (agent, new_files))
     log.info("Type: %s" % (type(new_files)))
 
     agentname = str(agent)
@@ -179,7 +182,7 @@ def update_files(agent, new_files):
         dirname = new_file[0]
         filename = new_file[1]
         content = new_file[2]
-        
+
         update_file(agentname, dirname, filename, content)
 
     log.info("Files for agent '%s' has been updated." % (agent))
@@ -205,7 +208,7 @@ def run_monitoring():
 def main():
     secretary = AgentSecretary("localhost", 8080)
     secretary.start()
-    
+
     run_monitoring()
 
 if __name__ == "__main__":
