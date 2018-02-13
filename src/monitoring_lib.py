@@ -40,3 +40,38 @@ def run_monitoring(dirnames):
         for dirname in dirnames:
             threadPool.submit(check_dir, dirname)
         sleep(10)
+
+
+def check_space(monitoring_space):
+    monitoring_space.check_space()
+
+
+class BaseMonitoring:
+
+    def __init__(self, space_name):
+        self.space_name
+
+    def get_objects(self):
+        raise VirtualMethodException("get_objects")
+
+    def get_object_content(self, object_name):
+        raise VirtualMethodException("get_object_content")
+
+    def check_object(object_name):
+        object_content = self.get_object_content(object_name)
+        last_requested_content = get_last_version_file(dirname, filename)
+        
+
+    def check_space(self):
+        objects = self.get_objects()
+
+        for object_name in objects:
+            self.check_object(object_name)
+
+
+
+class VirtualMethodException(Exception):
+
+    def __init__(self, method_name):
+        super(ProtocolException, self).__init__(
+              "Method \"%s\" should be overrided." %(method_name))
