@@ -59,7 +59,8 @@ class BaseMonitoring:
 
     def check_object(object_name):
         object_content = self.get_object_content(object_name)
-        last_requested_content = get_last_version_file(dirname, filename)
+        last_requested_content = get_last_version_object(
+                                    self.space_name, object_name)
         
 
     def check_space(self):
