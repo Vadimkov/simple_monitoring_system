@@ -12,12 +12,17 @@ NUMBER_ATTEMPTS = 3
 
 
 class Agent(object):
+    """Object for communicate with monitoring_agent."""
 
     def __init__(self, address, port):
+        """Address and ord of monitoring_agent."""
+
         self.address = address
         self.port = port
 
     def __eq__(self, other):
+        """Compare address and port of agents."""
+
         if self.address == other.address and self.port == other.port:
             return True
         else:
@@ -28,6 +33,14 @@ class Agent(object):
         return agentName
 
     def get_last_version(self):
+        """Get last version of files from agent.
+
+        Return List of Tuples:
+        [(agent, space, file, string),
+         (agent, space, file, string),
+         ...]
+        """
+
         log.info("send last version request")
 
         diffRequestMes = DiffRequestMes()
@@ -39,13 +52,18 @@ class Agent(object):
 
 
 class AgentSecretary(Thread):
+    """Register agent and listen client requests."""
 
     def __init__(self, host, port):
+        """Host and port of monitoring center."""
+
         super(AgentSecretary, self).__init__()
         self.host = host
         self.port = port
 
     def run(self):
+        """Start monitoring center. Listen register and client's requests."""
+
         agent_logger_socket = socket(AF_INET, SOCK_STREAM)
         agent_logger_socket.bind((self.host, self.port))
         agent_logger_socket.listen(5)
@@ -71,6 +89,11 @@ class AgentSecretary(Thread):
             raise UnsupportedMessageTypeException(req.get_type())
 
     def _handle_register_request(self, registerRequest, sock):
+        """Handle register request from agent and send response.
+        Confirm agent if this agent is not exists.
+        Reject agent if agent already registeres.
+        """
+
         agent = self._agent_parse(registerRequest)
         if self._register_agent(agent):
             self._send_confirm(sock)
@@ -78,6 +101,8 @@ class AgentSecretary(Thread):
             self._send_reject(sock)
 
     def _handleExpressionRequest(self, exprRequest, sock):
+        """Get all units from DB, matched by exprRequest and send response."""
+
         expr = exprRequest.get_field('Expression')
         object_type = exprRequest.get_field('Type')
 
@@ -125,11 +150,9 @@ class AgentSecretary(Thread):
         send_message(resp, sock=sock)
 
 
-def get_matches(expr, object_type):
-    pass
-
-
 def update_files(agent, new_files):
+    """Save updated files, received from agent."""
+
     log.info("Try to update for files agent '%s' files:\n%s"
              % (agent, new_files))
     log.info("Type: %s" % (type(new_files)))
@@ -151,6 +174,8 @@ def update_files(agent, new_files):
 
 
 def run_monitoring():
+    """Every X seconds update monitoring files from agent."""
+
     create_monitoring_db()
 
     while True:
@@ -166,6 +191,8 @@ def run_monitoring():
 
 
 def handle_failed_connection(agent):
+    """If connection to agent failed more then NUMBER_ATTEMPTS - remove it."""
+
     if str(agent) not in failed_attempts:
         failed_attempts[str(agent)] = 1
     else:
