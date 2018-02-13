@@ -1,7 +1,4 @@
-import asyncore
-import pickle
 import time
-import logging
 from socket import *
 from threading import Thread
 from center_storage import *
@@ -30,32 +27,7 @@ class Agent(object):
         agentName = self.address + ":" + str(self.port)
         return agentName
 
-    def _send_last_version_req(self):
-        diffReqMes = DiffRequestMes()
-
-        self._agent_socket = socket(AF_INET, SOCK_STREAM)
-        self._agent_socket.connect((self.address, self.port))
-        self._agent_socket.send(request_message)
-
-    def _recv_last_version(self):
-        log.info("Get last version")
-
-        data = self._agent_socket.recv(4048)
-        log.info("Read data")
-        if not data:
-            return None
-
-        new_files = parse_file_update(data)
-        if new_files:
-            log.warning("New files:\n%s" % str(new_files))
-
-        self._agent_socket.close()
-        self._agent_socket = None
-
-        return new_files
-
     def get_last_version(self):
-        new_files = []
         log.info("send last version request")
 
         diffRequestMes = DiffRequestMes()
@@ -178,11 +150,6 @@ def update_files(agent, new_files):
     log.info("Files for agent '%s' has been updated." % (agent))
 
 
-def parse_file_update(data):
-    files = pickle.loads(data)
-    return files[1:]
-
-
 def run_monitoring():
     create_monitoring_db()
 
@@ -193,7 +160,7 @@ def run_monitoring():
                 new_files = agent.get_last_version()
                 update_files(agent, new_files)
                 log.info("Finish with %s" % agent)
-            except ConnectionRefusedError as e:
+            except ConnectionRefusedError:
                 handle_failed_connection(agent)
         time.sleep(5)
 

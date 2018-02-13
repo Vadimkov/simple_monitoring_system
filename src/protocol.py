@@ -1,5 +1,4 @@
 import json
-import pickle
 import struct
 from socket import *
 from logger import log
