@@ -61,6 +61,8 @@ def update_object(table, space_name, object_name, content):
 def get_object(table, space_name, object_name):
     log.debug("Get %s of object %s from space %s" % (table, object_name, space_name))
 
+    response = None
+
     try:
         conn = sqlite3.connect(MONITORING_DB_NAME)
         c = conn.cursor()
