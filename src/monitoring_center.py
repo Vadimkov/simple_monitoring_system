@@ -1,4 +1,6 @@
 import time
+import logging
+import argparse
 from socket import *
 from threading import Thread
 from center_storage import *
@@ -206,8 +208,43 @@ def handle_failed_connection(agent):
         active_agents.remove(agent)
 
 
+def configure():
+    parser = argparse.ArgumentParser(description='Monitoring center.')
+    parser.add_argument('interface')
+    parser.add_argument('port', type=int)
+    parser.add_argument('log_level')
+
+    args = parser.parse_args()
+    args = args.__dict__
+
+    args['log_level'] = parse_log_level(args['log_level'])
+
+    return args
+
+
+def parse_log_level(log_level_str):
+    log_level = logging.INFO
+    log_level_str = log_level_str.upper()
+
+    if log_level_str == "DEBUG":
+        log_level = logging.DEBUG
+    elif log_level_str == "INFO":
+        log_level = logging.INFO
+    elif log_level_str == "WARNING":
+        log_level = logging.WARNING
+    elif log_level_str == "ERROR":
+        log_level = logging.ERROR
+
+    return log_level
+
+
+
 def main():
-    secretary = AgentSecretary("localhost", 8080)
+    args = configure()
+    logging.getLogger("CenterLogger")
+    log.setLevel(args['log_level'])
+
+    secretary = AgentSecretary(args['interface'], args['port'])
     secretary.start()
 
     run_monitoring()

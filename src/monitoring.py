@@ -41,7 +41,6 @@ def main():
     for dir_name in dir_names:
         spaces.append(MonitoringDir(dir_name))
 
-    create_monitoring_db()
     while True:
         for space_obj in spaces:
             monitoringProc = Process(target=check_space, args=(space_obj,))
