@@ -4,6 +4,7 @@ from multiprocessing import Process
 from logger import log
 from monitoring_lib import BaseMonitoring, check_space
 from monitoring_agent import run_agent
+from time import sleep
 
 
 class MonitoringDir(BaseMonitoring):
@@ -40,9 +41,12 @@ def main():
     for dir_name in dir_names:
         spaces.append(MonitoringDir(dir_name))
 
-    for space_obj in spaces:
-        monitoringProc = Process(target=check_space, args=(space_obj,))
-        monitoringProc.start()
+    create_monitoring_db()
+    while True:
+        for space_obj in spaces:
+            monitoringProc = Process(target=check_space, args=(space_obj,))
+            monitoringProc.start()
+        sleep(10)
 
 
 if __name__ == "__main__":

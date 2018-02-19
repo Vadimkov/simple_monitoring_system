@@ -18,14 +18,20 @@ def create_monitoring_db():
     tables = c.fetchall()
 
     if (LAST_VERSION_OBJECTS_NAME,) not in tables:
+        log.debug("CREATE TABLE %s (space_name text, object_name text, content text)"
+                  % (LAST_VERSION_OBJECTS_NAME))
         c.execute("CREATE TABLE %s (space_name text, object_name text, content text)"
                   % (LAST_VERSION_OBJECTS_NAME))
 
     if (DIFF_OBJECTS_NAME,) not in tables:
+        log.debug("CREATE TABLE %s (space_name text, object_name text, content text)"
+                  % (DIFF_OBJECTS_NAME))
         c.execute("CREATE TABLE %s (space_name text, object_name text, content text)"
                   % (DIFF_OBJECTS_NAME))
 
     if (LAST_REQUESTED_OBJECTS_NAME,) not in tables:
+        log.debug("CREATE TABLE %s (space_name text, object_name text, content text)"
+                  % (LAST_REQUESTED_OBJECTS_NAME))
         c.execute("CREATE TABLE %s (space_name text, object_name text, content text)"
                   % (LAST_REQUESTED_OBJECTS_NAME))
 
