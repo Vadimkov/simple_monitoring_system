@@ -2,9 +2,10 @@ import logging
 import os
 from multiprocessing import Process
 from logger import log
-from monitoring_lib import BaseMonitoring, check_space
+from monitoring_lib import BaseMonitoring, check_space, configure
 from monitoring_agent import run_agent
 from time import sleep
+from agent_storage import create_monitoring_db
 
 
 class MonitoringDir(BaseMonitoring):
@@ -32,11 +33,19 @@ class MonitoringDir(BaseMonitoring):
 
 
 def main():
-    p = Process(target=run_agent)
+    conf = configure()
+    log.setLevel(conf['log_level'])
+
+    p = Process(target=run_agent,
+                args=(conf['agent_interface'], conf['agent_port'],
+                      conf['center_interface'], conf['center_port'])
+                )
     p.start()
 
-    dir_names = ("monitoring", "monitoring1", "monitoring2")
+    print(conf)
+    dir_names = conf['directories']
     spaces = []
+    create_monitoring_db()
 
     for dir_name in dir_names:
         spaces.append(MonitoringDir(dir_name))
@@ -49,5 +58,4 @@ def main():
 
 
 if __name__ == "__main__":
-    log.setLevel(logging.INFO)
     main()

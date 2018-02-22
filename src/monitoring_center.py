@@ -238,7 +238,6 @@ def parse_log_level(log_level_str):
     return log_level
 
 
-
 def main():
     args = configure()
     logging.getLogger("CenterLogger")

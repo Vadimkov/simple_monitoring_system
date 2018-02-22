@@ -7,16 +7,18 @@ from socket import *
 class MonitoringAgent():
     """Register in the center and send diff responses to center."""
 
-    def __init__(self):
-        self.this_host = "localhost"
-        self.this_port = 8085
+    def __init__(self, agent_host, agent_port, center_host, center_port):
+        self.agent_host = agent_host
+        self.agent_port = agent_port
+        self.center_host = center_host
+        self.center_port = center_port
 
     def _register_to_center(self, centerHost, centerPort):
         """Send register request to center."""
 
         regRequest = RegisterRequestMes()
-        regRequest.set_field('Host', self.this_host)
-        regRequest.set_field('Port', self.this_port)
+        regRequest.set_field('Host', self.agent_host)
+        regRequest.set_field('Port', self.agent_port)
         sock = send_message_by_address(regRequest, (centerHost, centerPort))
         regResponse = get_message(sock)
 
@@ -28,9 +30,9 @@ class MonitoringAgent():
     def run(self, center_host, center_port):
         """Run agent for center center_host:center_port."""
 
-        self._register_to_center(center_host, center_port)
+        self._register_to_center(self.center_host, self.center_port)
         sock = socket(AF_INET, SOCK_STREAM)
-        sock.bind((self.this_host, self.this_port))
+        sock.bind((self.agent_host, self.agent_port))
         sock.listen(5)
 
         log.info("Agent has been started!")
@@ -59,6 +61,7 @@ class MonitoringAgent():
         send_message(diffResponseMes, sock)
 
 
-def run_agent():
-    agent = MonitoringAgent()
+def run_agent(agent_host, agent_port, center_host, center_port):
+    agent = MonitoringAgent(agent_host, agent_port,
+                            center_host, center_port)
     agent.run("localhost", 8080)

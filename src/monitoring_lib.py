@@ -1,46 +1,45 @@
+import os
+import argparse
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from time import sleep
 from agent_storage import *
 from logger import log
 from abc import ABCMeta, abstractmethod
-import os
 
 
-def check_dir(dirname):
-    log.info("Check dir %s" % (dirname))
-    filenames = os.listdir(dirname)
-    log.debug("In the %s detected:\n%s" % (dirname, str(filenames)))
+def configure():
+    parser = argparse.ArgumentParser(description='Monitoring agent.')
+    parser.add_argument('agent_interface')
+    parser.add_argument('agent_port', type=int)
+    parser.add_argument('center_interface')
+    parser.add_argument('center_port', type=int)
+    parser.add_argument('log_level')
+    parser.add_argument('directories', nargs='+',
+                        help='List of objects for monitoring')
 
-    for filename in filenames:
-        log.debug("Check file %s" % (filename))
+    args = parser.parse_args()
+    args = args.__dict__
 
-        filepath = dirname + "/" + filename
-        log.debug("Read file " + filename)
-        currentFileContent = ''.join(open(filepath).readlines())
-        lastRequestedFileContent = get_last_version_file(dirname, filename)
+    args['log_level'] = parse_log_level(args['log_level'])
 
-        # compare files
-        if lastRequestedFileContent:
-            lastRequestedFileContent = lastRequestedFileContent[0][0]
-        log.debug("Last requested:\n" + str(lastRequestedFileContent))
-        log.debug("Current:\n" + str(currentFileContent))
-
-        if currentFileContent != lastRequestedFileContent:
-            log.info("Update file %s" % (filepath))
-            update_diff_file(dirname, filename, currentFileContent)
-
-        update_last_version_file(dirname, filename, currentFileContent)
+    return args
 
 
-def run_monitoring(dirnames):
-    # dirnames = ["monitoring"]
-    threadPool = ThreadPoolExecutor(5)
-    create_monitoring_db()
+def parse_log_level(log_level_str):
+    log_level = logging.INFO
+    log_level_str = log_level_str.upper()
 
-    while True:
-        for dirname in dirnames:
-            threadPool.submit(check_dir, dirname)
-        sleep(10)
+    if log_level_str == "DEBUG":
+        log_level = logging.DEBUG
+    elif log_level_str == "INFO":
+        log_level = logging.INFO
+    elif log_level_str == "WARNING":
+        log_level = logging.WARNING
+    elif log_level_str == "ERROR":
+        log_level = logging.ERROR
+
+    return log_level
 
 
 def check_space(monitoring_space):
@@ -93,11 +92,3 @@ class BaseMonitoring:
 
         for object_name in objects:
             self.check_object(object_name)
-
-
-class VirtualMethodException(Exception):
-    """Called method should be overrided."""
-
-    def __init__(self, method_name):
-        super(ProtocolException, self).__init__(
-              "Method \"%s\" should be overrided." % (method_name))
