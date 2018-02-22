@@ -175,7 +175,7 @@ def update_files(agent, new_files):
     log.info("Files for agent '%s' has been updated." % (agent))
 
 
-def run_monitoring():
+def run_monitoring(active_agents):
     """Every X seconds update monitoring files from agent."""
 
     create_monitoring_db()
@@ -246,7 +246,7 @@ def main():
     secretary = AgentSecretary(args['interface'], args['port'])
     secretary.start()
 
-    run_monitoring()
+    run_monitoring(active_agents)
 
 
 if __name__ == "__main__":
