@@ -34,6 +34,10 @@ class Agent(object):
         agentName = self.address + ":" + str(self.port)
         return agentName
 
+    def __repr__(self):
+        agentName = self.address + ":" + str(self.port)
+        return agentName
+
     def get_last_version(self):
         """Get last version of files from agent.
 

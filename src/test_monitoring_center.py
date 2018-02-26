@@ -2,6 +2,7 @@ import unittest
 import monitoring_center
 import center_storage
 import logging
+import protocol
 
 
 class TestMonitoringFunctions(unittest.TestCase):
@@ -75,6 +76,39 @@ class TestMonitoringFunctions(unittest.TestCase):
 
         for f in files_from_db:
             self.assertTrue(f in golden_files)
+
+
+class TestAgentSecretary(unittest.TestCase):
+
+    def test_agent_parse(self):
+        agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        agent = monitoring_center.Agent("127.0.0.1", 5557)
+
+        reg_rquest = protocol.RegisterRequestMes()
+        reg_rquest.set_field('Host', "127.0.0.1")
+        reg_rquest.set_field('Port', 5557)
+
+        self.assertEqual(agent_secretary._agent_parse(reg_rquest), agent)
+
+    def test_register_agent(self):
+        monitoring_center.active_agents = []
+        agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        agent = monitoring_center.Agent("127.0.0.1", 5557)
+
+        self.assertTrue(agent_secretary._register_agent(agent))
+        self.assertTrue(agent in monitoring_center.active_agents)
+
+    def test_register_duplicated_agent(self):
+        monitoring_center.active_agents = []
+        agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        agent = monitoring_center.Agent("127.0.0.1", 5557)
+
+        self.assertTrue(agent_secretary._register_agent(agent))
+        self.assertTrue(agent in monitoring_center.active_agents)
+
+        self.assertFalse(agent_secretary._register_agent(agent))
+        self.assertTrue(agent in monitoring_center.active_agents)
+
 
 
 if __name__ == '__main__':
