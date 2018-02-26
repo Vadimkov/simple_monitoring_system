@@ -100,6 +100,15 @@ class Message:
     def __str__(self):
         return json.dumps(self.messageBody, indent=4)
 
+    def __repr__(self):
+        return json.dumps(self.messageBody, indent=4)
+
+    def __getitem__(self, key):
+        return self.get_field(key)
+
+    def __setitem__(self, key, value):
+        self.set_field(key, value)
+
     def _to_json(self):
         return json.dumps(self.messageBody)
 
