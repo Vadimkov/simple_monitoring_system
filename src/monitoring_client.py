@@ -4,7 +4,7 @@ from socket import *
 from protocol import *
 
 
-addr = "10.75.132.42"
+addr = "127.0.0.1"
 port = 8080
 
 

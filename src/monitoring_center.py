@@ -8,7 +8,6 @@ from protocol import *
 from logger import *
 
 active_agents = []
-failed_attempts = {}  # key - agent name, value - failed attempts to connect
 
 NUMBER_ATTEMPTS = 3
 
@@ -138,12 +137,12 @@ class AgentSecretary(Thread):
         return Agent(address, port)
 
     def _register_agent(self, agent):
-        if agent in active_agents:
+        if is_agent_exist(agent.address, agent.port):
             log.warning("Agent %s already registered" % (str(agent)))
             return False
         else:
-            active_agents.append(agent)
-            return True
+            log.info("Register %s" % (agent))
+            return add_active_agent(agent.address, agent.port)
 
     def _send_confirm(self, sock):
         resp = RegisterResponseMes()
@@ -159,7 +158,24 @@ class AgentSecretary(Thread):
 class MonitoringCenterManager():
 
     def __init__(self):
-        self.failed_attempts = []
+        self.failed_attempts = {} # key - agent name, value - failed attempts to connect
+
+    def _get_active_agents(self):
+        """Get list of active agents as tuples from DB and return
+        List of objects Agent."""
+
+        agent_tuples = get_all_agents()
+        agent_objects = []
+
+        for agent_tuple in agent_tuples:
+            agent_objects.append(Agent(agent_tuple[0], agent_tuple[1]))
+
+        return agent_objects
+
+    def _remove_active_agent(self, agent):
+        """Remove agent from DB."""
+
+        remove_active_agent(agent.address, agent.port)
 
     def update_files(self, agent, new_files):
         """Save updated files, received from agent."""
@@ -189,6 +205,7 @@ class MonitoringCenterManager():
         create_monitoring_db()
 
         while True:
+            active_agents = self._get_active_agents()
             for agent in active_agents:
                 try:
                     log.info("Request last files from %s" % agent)
@@ -200,7 +217,8 @@ class MonitoringCenterManager():
             time.sleep(5)
 
     def handle_failed_connection(self, agent):
-        """If connection to agent failed more then NUMBER_ATTEMPTS - remove it."""
+        """If connection to agent failed more then NUMBER_ATTEMPTS -
+        remove it."""
 
         if str(agent) not in self.failed_attempts:
             self.failed_attempts[str(agent)] = 1
@@ -212,7 +230,7 @@ class MonitoringCenterManager():
 
         if self.failed_attempts[str(agent)] >= NUMBER_ATTEMPTS:
             log.error("Remove agent '%s' from list active agents" % (str(agent)))
-            active_agents.remove(agent)
+            self._remove_active_agent(agent)
 
 
 def configure():

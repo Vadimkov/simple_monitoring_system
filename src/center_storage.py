@@ -6,6 +6,7 @@ from logger import log
 
 MONITORING_DB_NAME = "center_monitoring.db"
 FILES_TABLE_NAME = 'lastVersionFiles'
+AGENT_TABLE_NAME = 'activeAgents'
 
 
 def create_monitoring_db():
@@ -25,6 +26,16 @@ def create_monitoring_db():
                       "(agentname text, dirname text, "
                       "filename text, content text)"
                       % (FILES_TABLE_NAME))
+    except Exception as e:
+        print("Failed for %s (create table): %s: %s "
+              % (FILES_TABLE_NAME, type(e).__name__, e))
+
+    try:
+        if (AGENT_TABLE_NAME,) not in tables:
+            log.info("Create table")
+            c.execute("CREATE TABLE %s "
+                      "(agenthost text, agentport int)"
+                      % (AGENT_TABLE_NAME))
     except Exception as e:
         print("Failed for %s (create table): %s: %s "
               % (FILES_TABLE_NAME, type(e).__name__, e))
@@ -101,6 +112,76 @@ def get_matched_records(record_type, expression):
             report.append(record)
 
     return report
+
+
+def add_active_agent(agent_host, agent_port):
+    log.debug("Try to add agent %s:%s to active_agents_list"
+              % (agent_host, agent_port))
+    table = AGENT_TABLE_NAME
+
+    try:
+        conn = sqlite3.connect(MONITORING_DB_NAME)
+        c = conn.cursor()
+
+        if not is_agent_exist(agent_host, agent_port):
+            c.execute("INSERT INTO %s VALUES ('%s', '%r')"
+                      % (table, agent_host, agent_port))
+        else:
+            return False
+
+        conn.commit()
+    except Exception as e:
+        print("Failed add agent %s:%s to DB: %s: %s "
+              % (agent_host, agent_port, table, type(e).__name__, e))
+    finally:
+        conn.close()
+
+    return True
+
+
+def is_agent_exist(agent_host, agent_port):
+    agents = get_all_agents()
+    return (agent_host, agent_port) in agents
+
+
+def get_all_agents():
+    log.debug("Get all agents")
+    table = AGENT_TABLE_NAME
+    response = None
+
+    try:
+        conn = sqlite3.connect(MONITORING_DB_NAME)
+        c = conn.cursor()
+
+        c.execute("SELECT agenthost, agentport FROM %s" % (table))
+        response = c.fetchall()
+        conn.close()
+
+    except Exception as e:
+        print("Failed action get_all_agents: %s: %s " % (type(e).__name__, e))
+    finally:
+        conn.close()
+
+    return response
+
+
+def remove_active_agent(agent_host, agent_port):
+    log.debug("Delete agent %s:%s" % (agent_host, agent_port))
+    table = AGENT_TABLE_NAME
+
+    try:
+        conn = sqlite3.connect(MONITORING_DB_NAME)
+        c = conn.cursor()
+
+        c.execute("DELETE FROM %s WHERE agenthost='%s' AND agentport='%s'"
+                  % (table, agent_host, agent_port))
+        conn.commit()
+        conn.close()
+
+    except Exception as e:
+        print("Failed remove_active_agent: %s: %s " % (type(e).__name__, e))
+    finally:
+        conn.close()
 
 
 def create_empty_monitoring_db():
