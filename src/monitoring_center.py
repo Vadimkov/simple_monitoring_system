@@ -156,60 +156,63 @@ class AgentSecretary(Thread):
         send_message(resp, sock=sock)
 
 
-def update_files(agent, new_files):
-    """Save updated files, received from agent."""
+class MonitoringCenterManager():
 
-    log.info("Try to update for files agent '%s' files:\n%s"
-             % (agent, new_files))
-    log.info("Type: %s" % (type(new_files)))
+    def __init__(self):
+        self.failed_attempts = []
 
-    agentname = str(agent)
-    for new_file in new_files:
-        if (len(new_file) < 3):
-            log.error("Incorrect file '%s'" % (str(new_file)))
-            continue
+    def update_files(self, agent, new_files):
+        """Save updated files, received from agent."""
 
-        log.info("Update file %s" % (str(new_file)))
-        dirname = new_file[0]
-        filename = new_file[1]
-        content = new_file[2]
+        log.info("Try to update for files agent '%s' files:\n%s"
+                 % (agent, new_files))
+        log.info("Type: %s" % (type(new_files)))
 
-        update_file(agentname, dirname, filename, content)
+        agentname = str(agent)
+        for new_file in new_files:
+            if (len(new_file) < 3):
+                log.error("Incorrect file '%s'" % (str(new_file)))
+                continue
 
-    log.info("Files for agent '%s' has been updated." % (agent))
+            log.info("Update file %s" % (str(new_file)))
+            dirname = new_file[0]
+            filename = new_file[1]
+            content = new_file[2]
 
+            update_file(agentname, dirname, filename, content)
 
-def run_monitoring(active_agents):
-    """Every X seconds update monitoring files from agent."""
+        log.info("Files for agent '%s' has been updated." % (agent))
 
-    create_monitoring_db()
+    def run_monitoring(self):
+        """Every X seconds update monitoring files from agent."""
 
-    while True:
-        for agent in active_agents:
-            try:
-                log.info("Request last files from %s" % agent)
-                new_files = agent.get_last_version()
-                update_files(agent, new_files)
-                log.info("Finish with %s" % agent)
-            except ConnectionRefusedError:
-                handle_failed_connection(agent)
-        time.sleep(5)
+        create_monitoring_db()
 
+        while True:
+            for agent in active_agents:
+                try:
+                    log.info("Request last files from %s" % agent)
+                    new_files = agent.get_last_version()
+                    self.update_files(agent, new_files)
+                    log.info("Finish with %s" % agent)
+                except ConnectionRefusedError:
+                    self.handle_failed_connection(agent)
+            time.sleep(5)
 
-def handle_failed_connection(agent):
-    """If connection to agent failed more then NUMBER_ATTEMPTS - remove it."""
+    def handle_failed_connection(self, agent):
+        """If connection to agent failed more then NUMBER_ATTEMPTS - remove it."""
 
-    if str(agent) not in failed_attempts:
-        failed_attempts[str(agent)] = 1
-    else:
-        failed_attempts[str(agent)] += 1
+        if str(agent) not in self.failed_attempts:
+            self.failed_attempts[str(agent)] = 1
+        else:
+            self.failed_attempts[str(agent)] += 1
 
-    log.warning("Failed '%s' attempts connect to '%s'"
-                % (failed_attempts[str(agent)], str(agent)))
+        log.warning("Failed '%s' attempts connect to '%s'"
+                    % (self.failed_attempts[str(agent)], str(agent)))
 
-    if failed_attempts[str(agent)] >= NUMBER_ATTEMPTS:
-        log.error("Remove agent '%s' from list active agents" % (str(agent)))
-        active_agents.remove(agent)
+        if self.failed_attempts[str(agent)] >= NUMBER_ATTEMPTS:
+            log.error("Remove agent '%s' from list active agents" % (str(agent)))
+            active_agents.remove(agent)
 
 
 def configure():
@@ -250,7 +253,8 @@ def main():
     secretary = AgentSecretary(args['interface'], args['port'])
     secretary.start()
 
-    run_monitoring(active_agents)
+    monitoring_center_manager = MonitoringCenterManager()
+    monitoring_center_manager.run_monitoring()
 
 
 if __name__ == "__main__":
