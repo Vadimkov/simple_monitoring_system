@@ -17,29 +17,29 @@ def get_message(conn):
 
     if data['MessageType'] == 'RegisterRequestMes':
         mes = RegisterRequestMes()
-        mes.set_field('Host', data['Host'])
-        mes.set_field('Port', data['Port'])
+        mes['Host'] = data['Host']
+        mes['Port'] = data['Port']
     elif data['MessageType'] == 'RegisterResponseMes':
         mes = RegisterResponseMes()
-        mes.set_field('Status', data['Status'])
+        mes['Status'] = data['Status']
     elif data['MessageType'] == 'DiffRequestMes':
         mes = DiffRequestMes()
     elif data['MessageType'] == 'DiffResponseMes':
         mes = DiffResponseMes()
-        mes.set_field('DiffUpdate', data['DiffUpdate'])
+        mes['DiffUpdate'] = data['DiffUpdate']
     elif data['MessageType'] == 'ExpressionRequestMes':
         mes = ExpressionRequestMes()
-        mes.set_field('Expression', data['Expression'])
-        mes.set_field('Type', data['Type'])
+        mes['Expression'] = data['Expression']
+        mes['Type'] = data['Type']
     elif data['MessageType'] == 'ExpressionsLenghtMes':
         mes = ExpressionsLenghtMes()
-        mes.set_field('Lenght', data['Lenght'])
+        mes['Lenght'] = data['Lenght']
     elif data['MessageType'] == 'ExpressionUnitMes':
         mes = ExpressionUnitMes()
-        mes.set_field('Agent', data['Agent'])
-        mes.set_field('Space', data['Space'])
-        mes.set_field('Object', data['Object'])
-        mes.set_field('String', data['String'])
+        mes['Agent'] = data['Agent']
+        mes['Space'] = data['Space']
+        mes['Object'] = data['Object']
+        mes['String'] = data['String']
     elif data['MessageType'] == 'ExpressionStatusMes':
         mes = ExpressionStatusMes()
     else:
@@ -104,15 +104,15 @@ class Message:
         return json.dumps(self.messageBody, indent=4)
 
     def __getitem__(self, key):
-        return self.get_field(key)
+        return self._get_field(key)
 
     def __setitem__(self, key, value):
-        self.set_field(key, value)
+        self._set_field(key, value)
 
     def _to_json(self):
         return json.dumps(self.messageBody)
 
-    def set_field(self, field, value):
+    def _set_field(self, field, value):
         if field not in self.messageBody:
             raise UndefinedFieldException(self, field)
         if field == 'MessageType':
@@ -120,14 +120,14 @@ class Message:
 
         self.messageBody[field] = value
 
-    def get_field(self, field):
+    def _get_field(self, field):
         if field not in self.messageBody:
             raise UndefinedFieldException(self, field)
 
         return self.messageBody[field]
 
     def get_type(self):
-        return self.get_field('MessageType')
+        return self['MessageType']
 
 
 class RegisterRequestMes(Message):

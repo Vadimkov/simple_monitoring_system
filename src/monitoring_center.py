@@ -54,7 +54,7 @@ class Agent(object):
                                        (self.address, self.port))
         diffResponseMes = get_message(sock)
 
-        return diffResponseMes.get_field('DiffUpdate')
+        return diffResponseMes['DiffUpdate']
 
 
 class AgentSecretary(Thread):
@@ -109,22 +109,22 @@ class AgentSecretary(Thread):
     def _handleExpressionRequest(self, exprRequest, sock):
         """Get all units from DB, matched by exprRequest and send response."""
 
-        expr = exprRequest.get_field('Expression')
-        object_type = exprRequest.get_field('Type')
+        expr = exprRequest['Expression']
+        object_type = exprRequest['Type']
 
         report = get_matched_records(object_type, expr)
 
         try:
             expressionsLenghtMes = ExpressionsLenghtMes()
-            expressionsLenghtMes.set_field('Lenght', len(report))
+            expressionsLenghtMes['Lenght'] = len(report)
             send_message(expressionsLenghtMes, sock)
 
             for record in report:
                 uMes = ExpressionUnitMes()
-                uMes.set_field('Agent', record[0])
-                uMes.set_field('Space', record[1])
-                uMes.set_field('Object', record[2])
-                uMes.set_field('String', record[3])
+                uMes['Agent'] = record[0]
+                uMes['Space'] = record[1]
+                uMes['Object'] = record[2]
+                uMes['String'] = record[3]
 
                 send_message(uMes, sock)
         except Exception as e:
@@ -133,8 +133,8 @@ class AgentSecretary(Thread):
             sock.close()
 
     def _agent_parse(self, regRequest):
-        address = regRequest.get_field('Host')
-        port = regRequest.get_field('Port')
+        address = regRequest['Host']
+        port = regRequest['Port']
         return Agent(address, port)
 
     def _register_agent(self, agent):
@@ -147,12 +147,12 @@ class AgentSecretary(Thread):
 
     def _send_confirm(self, sock):
         resp = RegisterResponseMes()
-        resp.set_field('Status', True)
+        resp['Status'] = True
         send_message(resp, sock=sock)
 
     def _send_reject(self, sock):
         resp = RegisterResponseMes()
-        resp.set_field('Status', False)
+        resp['Status'] = False
         send_message(resp, sock=sock)
 
 

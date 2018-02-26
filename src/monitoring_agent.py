@@ -17,12 +17,12 @@ class MonitoringAgent():
         """Send register request to center."""
 
         regRequest = RegisterRequestMes()
-        regRequest.set_field('Host', self.agent_host)
-        regRequest.set_field('Port', self.agent_port)
+        regRequest['Host'] = self.agent_host
+        regRequest['Port'] = self.agent_port
         sock = send_message_by_address(regRequest, (centerHost, centerPort))
         regResponse = get_message(sock)
 
-        if regResponse.get_field('Status'):
+        if regResponse['Status']:
             log.info("Registration passed")
         else:
             log.error("Registration failed")
@@ -57,7 +57,7 @@ class MonitoringAgent():
         log.warning("Try to write diff: %s" % (str(response)))
 
         diffResponseMes = DiffResponseMes()
-        diffResponseMes.set_field('DiffUpdate', response)
+        diffResponseMes['DiffUpdate'] = response
         send_message(diffResponseMes, sock)
 
 
