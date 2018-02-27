@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from logger import log
 
 
@@ -171,3 +172,11 @@ def update_last_requested_from_last_version():
               % (type(e).__name__, e))
     finally:
         conn.close()
+
+
+def create_empty_monitoring_db():
+    """Remove db and just create new one. Use it for tests only!"""
+
+    if os.path.isfile(MONITORING_DB_NAME):
+        os.remove(MONITORING_DB_NAME)
+    create_monitoring_db()
