@@ -3,9 +3,13 @@ import monitoring_center
 import center_storage
 import logging
 import protocol
+from unittest.mock import MagicMock
 
 
 class TestMonitoringFunctions(unittest.TestCase):
+
+    def setUp(self):
+        center_storage.create_empty_monitoring_db()
 
     def test_parse_log_level(self):
         self.assertEqual(monitoring_center.parse_log_level('DEBUG'),
@@ -18,8 +22,6 @@ class TestMonitoringFunctions(unittest.TestCase):
                          logging.ERROR)
 
     def test_update_files(self):
-        center_storage.create_empty_monitoring_db()
-
         agent = monitoring_center.Agent('127.0.0.1', 5555)
 
         new_files = []
@@ -42,8 +44,6 @@ class TestMonitoringFunctions(unittest.TestCase):
             self.assertTrue(f in golden_files)
 
     def test_two_update_files(self):
-        center_storage.create_empty_monitoring_db()
-
         agent = monitoring_center.Agent('127.0.0.1', 5555)
 
         golden_files = []
@@ -77,6 +77,9 @@ class TestMonitoringFunctions(unittest.TestCase):
 
 class TestAgentSecretary(unittest.TestCase):
 
+    def setUp(self):
+        center_storage.create_empty_monitoring_db()
+
     def test_agent_parse(self):
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
@@ -88,8 +91,6 @@ class TestAgentSecretary(unittest.TestCase):
         self.assertEqual(agent_secretary._agent_parse(reg_rquest), agent)
 
     def test_register_agent(self):
-        center_storage.create_empty_monitoring_db()
-
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
 
@@ -98,8 +99,6 @@ class TestAgentSecretary(unittest.TestCase):
                         agent.address, agent.port))
 
     def test_register_duplicated_agent(self):
-        center_storage.create_empty_monitoring_db()
-
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
 
@@ -110,6 +109,50 @@ class TestAgentSecretary(unittest.TestCase):
         self.assertFalse(agent_secretary._register_agent(agent))
         self.assertTrue(center_storage.is_agent_exist(
                         agent.address, agent.port))
+
+    def test_handle_request_register_request(self):
+        secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        secretary._handle_register_request = MagicMock()
+        secretary._handle_expression_request = MagicMock()
+
+        register_req = protocol.RegisterRequestMes()
+        register_req['Host'] = '127.0.0.1'
+        register_req['Port'] = 5557
+
+        sock = None
+
+        secretary._handle_request(register_req, sock)
+
+        secretary._handle_register_request.assert_called()
+        secretary._handle_expression_request.assert_not_called()
+
+    def test_handle_request_expression_request(self):
+        secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        secretary._handle_register_request = MagicMock()
+        secretary._handle_expression_request = MagicMock()
+
+        expression_req = protocol.ExpressionRequestMes()
+        expression_req['Expression'] = 'Any Expression'
+        expression_req['Type'] = 'Any Type'
+
+        sock = None
+
+        secretary._handle_request(expression_req, sock)
+
+        secretary._handle_register_request.assert_not_called()
+        secretary._handle_expression_request.assert_called()
+
+    def test_handle_request_unsupported_request(self):
+        secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        secretary._handle_register_request = MagicMock()
+        secretary._handle_expression_request = MagicMock()
+
+        unsupported_req = protocol.DiffRequestMes()
+
+        sock = None
+
+        with self.assertRaises(protocol.UnsupportedMessageTypeException):
+            secretary._handle_request(unsupported_req, sock)
 
 
 if __name__ == '__main__':

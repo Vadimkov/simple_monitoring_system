@@ -89,7 +89,7 @@ class AgentSecretary(Thread):
         if req.get_type() == "RegisterRequestMes":
             self._handle_register_request(req, sock)
         elif req.get_type() == "ExpressionRequestMes":
-            self._handleExpressionRequest(req, sock)
+            self._handle_expression_request(req, sock)
         else:
             raise UnsupportedMessageTypeException(req.get_type())
 
@@ -105,7 +105,7 @@ class AgentSecretary(Thread):
         else:
             self._send_reject(sock)
 
-    def _handleExpressionRequest(self, exprRequest, sock):
+    def _handle_expression_request(self, exprRequest, sock):
         """Get all units from DB, matched by exprRequest and send response."""
 
         expr = exprRequest['Expression']
@@ -158,7 +158,8 @@ class AgentSecretary(Thread):
 class MonitoringCenterManager():
 
     def __init__(self):
-        self.failed_attempts = {} # key - agent name, value - failed attempts to connect
+        # key - agent name, value - failed attempts to connect
+        self.failed_attempts = {}
 
     def _get_active_agents(self):
         """Get list of active agents as tuples from DB and return
