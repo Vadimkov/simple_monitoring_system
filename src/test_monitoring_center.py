@@ -4,6 +4,8 @@ import center_storage
 import logging
 import protocol
 from unittest.mock import MagicMock
+from unittest.mock import call
+from socket import *
 
 
 class TestMonitoringCenterManager(unittest.TestCase):
@@ -95,6 +97,15 @@ class TestAgentSecretary(unittest.TestCase):
     def setUp(self):
         center_storage.create_empty_monitoring_db()
 
+        self.new_files = []
+        self.new_files.append(['space1', 'obj1', '123456'])
+        self.new_files.append(['space2', 'obj2', '123456789'])
+        self.new_files.append(['space3', 'obj3', '7890'])
+
+        self.agent = monitoring_center.Agent('127.0.0.1', 5557)
+        mcm = monitoring_center.MonitoringCenterManager()
+        mcm.update_files(self.agent, self.new_files)
+
     def test_agent_parse(self):
         """Check _agent_parse(req) method:
         1. Create RegisterRequest();
@@ -102,13 +113,12 @@ class TestAgentSecretary(unittest.TestCase):
         3. Compare with golden Agent object."""
 
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
-        agent = monitoring_center.Agent("127.0.0.1", 5557)
 
         reg_rquest = protocol.RegisterRequestMes()
         reg_rquest['Host'] = "127.0.0.1"
         reg_rquest['Port'] = 5557
 
-        self.assertEqual(agent_secretary._agent_parse(reg_rquest), agent)
+        self.assertEqual(agent_secretary._agent_parse(reg_rquest), self.agent)
 
     def test_register_agent(self):
         """Check _register_agent(agent) method:
@@ -117,11 +127,10 @@ class TestAgentSecretary(unittest.TestCase):
         3. Check, is agent exists in the list active agents;"""
 
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
-        agent = monitoring_center.Agent("127.0.0.1", 5557)
 
-        self.assertTrue(agent_secretary._register_agent(agent))
+        self.assertTrue(agent_secretary._register_agent(self.agent))
         self.assertTrue(center_storage.is_agent_exist(
-                        agent.address, agent.port))
+                        self.agent.address, self.agent.port))
 
     def test_register_duplicated_agent(self):
         """Check _register_agent(agent) method for handle duplicates:
@@ -133,15 +142,14 @@ class TestAgentSecretary(unittest.TestCase):
         5. Check, that agent is still exists in the list active agents."""
 
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
-        agent = monitoring_center.Agent("127.0.0.1", 5557)
 
-        self.assertTrue(agent_secretary._register_agent(agent))
+        self.assertTrue(agent_secretary._register_agent(self.agent))
         self.assertTrue(center_storage.is_agent_exist(
-                        agent.address, agent.port))
+                        self.agent.address, self.agent.port))
 
-        self.assertFalse(agent_secretary._register_agent(agent))
+        self.assertFalse(agent_secretary._register_agent(self.agent))
         self.assertTrue(center_storage.is_agent_exist(
-                        agent.address, agent.port))
+                        self.agent.address, self.agent.port))
 
     def test_handle_request_register_request(self):
         """Check _handle_request methiod for handle RegisterRequestMes():
@@ -198,6 +206,72 @@ class TestAgentSecretary(unittest.TestCase):
 
         with self.assertRaises(protocol.UnsupportedMessageTypeException):
             secretary._handle_request(unsupported_req, sock)
+
+    def test_handle_expression_request_match_two_objects(self):
+        """Check _handle_expression_request method:
+        1. Create DB with some objects;
+        2. Execute _handle_expression_request with expression, matched 2
+           objects.
+        3. _handle_expression_request should send 3 messages:
+            1) ExpressionsLenghtMes;
+            2) ExpressionUnitMes for first object;
+            3) ExpressionUnitMes for second object;"""
+
+        secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        protocol.send_message = MagicMock()
+
+        sock = socket(AF_INET, SOCK_STREAM)
+
+        expr_req = protocol.ExpressionRequestMes()
+        expr_req['Expression'] = '123456'
+        expr_req['Type'] = 'Any'
+
+        secretary._handle_expression_request(expr_req, sock)
+
+        expr_lenght_mes = protocol.ExpressionsLenghtMes()
+        expr_lenght_mes['Lenght'] = 2
+        calls = [call(expr_lenght_mes, sock)]
+
+        uMes = protocol.ExpressionUnitMes()
+        uMes['Agent'] = str(self.agent)
+        uMes['Space'] = self.new_files[0][0]
+        uMes['Object'] = self.new_files[0][1]
+        uMes['String'] = self.new_files[0][2]
+        calls.append(call(uMes, sock))
+
+        uMes = protocol.ExpressionUnitMes()
+        uMes['Agent'] = str(self.agent)
+        uMes['Space'] = self.new_files[1][0]
+        uMes['Object'] = self.new_files[1][1]
+        uMes['String'] = self.new_files[1][2]
+        calls.append(call(uMes, sock))
+
+        protocol.send_message.assert_has_calls(calls, any_order=True)
+
+    def test_handle_expression_request_match_zero_objects(self):
+        """Check _handle_expression_request method:
+        1. Create DB with some objects;
+        2. Execute _handle_expression_request with expression, matched 0
+           objects.
+        3. _handle_expression_request should send ExpressionsLenghtMes with
+           Lenght=0 only."""
+
+        secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        protocol.send_message = MagicMock()
+
+        sock = socket(AF_INET, SOCK_STREAM)
+
+        expr_req = protocol.ExpressionRequestMes()
+        expr_req['Expression'] = '1234567890123456'
+        expr_req['Type'] = 'Any'
+
+        secretary._handle_expression_request(expr_req, sock)
+
+        expr_lenght_mes = protocol.ExpressionsLenghtMes()
+        expr_lenght_mes['Lenght'] = 0
+        calls = [call(expr_lenght_mes, sock)]
+
+        protocol.send_message.assert_has_calls(calls, any_order=True)
 
 
 if __name__ == '__main__':

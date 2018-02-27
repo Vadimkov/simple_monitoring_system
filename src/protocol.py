@@ -103,6 +103,19 @@ class Message:
     def __repr__(self):
         return json.dumps(self.messageBody, indent=4)
 
+    def __eq__(self, other):
+        if len(self) != len(other):
+            return False
+
+        for field in self.messageBody:
+            if self[field] != other[field]:
+                return False
+
+        return True
+
+    def __len__(self):
+        return len(self.messageBody)
+
     def __getitem__(self, key):
         return self._get_field(key)
 

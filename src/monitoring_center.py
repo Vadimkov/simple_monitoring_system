@@ -1,6 +1,7 @@
 import time
 import logging
 import argparse
+import protocol as p
 from socket import *
 from threading import Thread
 from center_storage import *
@@ -116,7 +117,7 @@ class AgentSecretary(Thread):
         try:
             expressionsLenghtMes = ExpressionsLenghtMes()
             expressionsLenghtMes['Lenght'] = len(report)
-            send_message(expressionsLenghtMes, sock)
+            p.send_message(expressionsLenghtMes, sock)
 
             for record in report:
                 uMes = ExpressionUnitMes()
@@ -125,7 +126,7 @@ class AgentSecretary(Thread):
                 uMes['Object'] = record[2]
                 uMes['String'] = record[3]
 
-                send_message(uMes, sock)
+                p.send_message(uMes, sock)
         except Exception as e:
             log.error("Can't send report: %s" % (e))
         finally:
