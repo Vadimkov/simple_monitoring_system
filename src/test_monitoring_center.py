@@ -6,12 +6,15 @@ import protocol
 from unittest.mock import MagicMock
 
 
-class TestMonitoringFunctions(unittest.TestCase):
+class TestMonitoringCenterManager(unittest.TestCase):
+    """Unit tests for MonitoringCenterManager."""
 
     def setUp(self):
         center_storage.create_empty_monitoring_db()
 
     def test_parse_log_level(self):
+        """Check parsing string to log level."""
+
         self.assertEqual(monitoring_center.parse_log_level('DEBUG'),
                          logging.DEBUG)
         self.assertEqual(monitoring_center.parse_log_level('INFO'),
@@ -22,6 +25,11 @@ class TestMonitoringFunctions(unittest.TestCase):
                          logging.ERROR)
 
     def test_update_files(self):
+        """Check update_files () method for create new objects in monitoring DB:
+        1. Create list of objects;
+        2. Save these objects in the DB;
+        3. Compare these objects with golden list."""
+
         agent = monitoring_center.Agent('127.0.0.1', 5555)
 
         new_files = []
@@ -44,6 +52,12 @@ class TestMonitoringFunctions(unittest.TestCase):
             self.assertTrue(f in golden_files)
 
     def test_two_update_files(self):
+        """Check update_files () method for update objects in monitoring DB:
+        1. Create list of objects;
+        2. Save these objects in the DB;
+        3. Update objects in the DB;
+        4. Compare these objects with golden list."""
+
         agent = monitoring_center.Agent('127.0.0.1', 5555)
 
         golden_files = []
@@ -76,11 +90,17 @@ class TestMonitoringFunctions(unittest.TestCase):
 
 
 class TestAgentSecretary(unittest.TestCase):
+    """Unit tests for AgentSecretary class."""
 
     def setUp(self):
         center_storage.create_empty_monitoring_db()
 
     def test_agent_parse(self):
+        """Check _agent_parse(req) method:
+        1. Create RegisterRequest();
+        2. Execute _agent_parse(req) for this request;
+        3. Compare with golden Agent object."""
+
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
 
@@ -91,6 +111,11 @@ class TestAgentSecretary(unittest.TestCase):
         self.assertEqual(agent_secretary._agent_parse(reg_rquest), agent)
 
     def test_register_agent(self):
+        """Check _register_agent(agent) method:
+        1. Create Agent object;
+        2. agent_secretary._register_agent(agent) for write it to DB;
+        3. Check, is agent exists in the list active agents;"""
+
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
 
@@ -99,6 +124,14 @@ class TestAgentSecretary(unittest.TestCase):
                         agent.address, agent.port))
 
     def test_register_duplicated_agent(self):
+        """Check _register_agent(agent) method for handle duplicates:
+        1. Create Agent object;
+        2. agent_secretary._register_agent(agent) for write it to DB;
+        3. Check, is agent exists in the list active agents;
+        4. Register same agent again and check, that _register_agent(agent)
+           return False;
+        5. Check, that agent is still exists in the list active agents."""
+
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
 
@@ -111,6 +144,10 @@ class TestAgentSecretary(unittest.TestCase):
                         agent.address, agent.port))
 
     def test_handle_request_register_request(self):
+        """Check _handle_request methiod for handle RegisterRequestMes():
+        1. Call _handle_request(RegisterRequestMes);
+        2. Check that method _handle_register_request is called."""
+
         secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         secretary._handle_register_request = MagicMock()
         secretary._handle_expression_request = MagicMock()
@@ -127,6 +164,10 @@ class TestAgentSecretary(unittest.TestCase):
         secretary._handle_expression_request.assert_not_called()
 
     def test_handle_request_expression_request(self):
+        """Check _handle_request methiod for handle ExpressionRequestMes():
+        1. Call _handle_request(ExpressionRequestMes);
+        2. Check that method _handle_expression_request is called."""
+
         secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         secretary._handle_register_request = MagicMock()
         secretary._handle_expression_request = MagicMock()
@@ -143,6 +184,10 @@ class TestAgentSecretary(unittest.TestCase):
         secretary._handle_expression_request.assert_called()
 
     def test_handle_request_unsupported_request(self):
+        """Check _handle_request methiod for handle Incorrect messages:
+        1. Call _handle_request(DiffRequestMes);
+        2. Check that exception UnsupportedMessageTypeException was raised."""
+
         secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         secretary._handle_register_request = MagicMock()
         secretary._handle_expression_request = MagicMock()
