@@ -106,19 +106,19 @@ class TestAgentSecretary(unittest.TestCase):
         mcm = monitoring_center.MonitoringCenterManager()
         mcm.update_files(self.agent, self.new_files)
 
+        self.secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+
     def test_agent_parse(self):
         """Check _agent_parse(req) method:
         1. Create RegisterRequest();
         2. Execute _agent_parse(req) for this request;
         3. Compare with golden Agent object."""
 
-        agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
+        register_req = protocol.RegisterRequestMes()
+        register_req['Host'] = "127.0.0.1"
+        register_req['Port'] = 5557
 
-        reg_rquest = protocol.RegisterRequestMes()
-        reg_rquest['Host'] = "127.0.0.1"
-        reg_rquest['Port'] = 5557
-
-        self.assertEqual(agent_secretary._agent_parse(reg_rquest), self.agent)
+        self.assertEqual(self.secretary._agent_parse(register_req), self.agent)
 
     def test_register_agent(self):
         """Check _register_agent(agent) method:
@@ -126,9 +126,7 @@ class TestAgentSecretary(unittest.TestCase):
         2. agent_secretary._register_agent(agent) for write it to DB;
         3. Check, is agent exists in the list active agents;"""
 
-        agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
-
-        self.assertTrue(agent_secretary._register_agent(self.agent))
+        self.assertTrue(self.secretary._register_agent(self.agent))
         self.assertTrue(center_storage.is_agent_exist(
                         self.agent.address, self.agent.port))
 
@@ -141,13 +139,11 @@ class TestAgentSecretary(unittest.TestCase):
            return False;
         5. Check, that agent is still exists in the list active agents."""
 
-        agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
-
-        self.assertTrue(agent_secretary._register_agent(self.agent))
+        self.assertTrue(self.secretary._register_agent(self.agent))
         self.assertTrue(center_storage.is_agent_exist(
                         self.agent.address, self.agent.port))
 
-        self.assertFalse(agent_secretary._register_agent(self.agent))
+        self.assertFalse(self.secretary._register_agent(self.agent))
         self.assertTrue(center_storage.is_agent_exist(
                         self.agent.address, self.agent.port))
 
@@ -272,6 +268,42 @@ class TestAgentSecretary(unittest.TestCase):
         calls = [call(expr_lenght_mes, sock)]
 
         protocol.send_message.assert_has_calls(calls, any_order=True)
+
+    def test_handle_register_request_success(self):
+        """Check _handle_register_request method:
+        1. Try to register new agent;
+        2. Check that confirmation has been sent."""
+
+        self.secretary._register_agent = MagicMock(return_value=True)
+        self.secretary._send_confirm = MagicMock()
+        self.secretary._send_reject = MagicMock()
+
+        register_req = protocol.RegisterRequestMes()
+        register_req['Host'] = "127.0.0.1"
+        register_req['Port'] = 5557
+
+        sock = None
+
+        self.secretary._handle_register_request(register_req, sock)
+        self.secretary._send_confirm.assert_called()
+
+    def test_handle_register_request_failed(self):
+        """Check _handle_register_request method:
+        1. Try to register already exists agent;
+        2. Check that rejection has been sent."""
+
+        self.secretary._register_agent = MagicMock(return_value=False)
+        self.secretary._send_confirm = MagicMock()
+        self.secretary._send_reject = MagicMock()
+
+        register_req = protocol.RegisterRequestMes()
+        register_req['Host'] = "127.0.0.1"
+        register_req['Port'] = 5557
+
+        sock = None
+
+        self.secretary._handle_register_request(register_req, sock)
+        self.secretary._send_reject.assert_called()
 
 
 if __name__ == '__main__':
