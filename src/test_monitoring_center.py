@@ -14,6 +14,17 @@ class TestMonitoringCenterManager(unittest.TestCase):
     def setUp(self):
         center_storage.create_empty_monitoring_db()
 
+        self.mcm = monitoring_center.MonitoringCenterManager()
+        self.agent = monitoring_center.Agent('127.0.0.1', 5555)
+
+        self.agents = []
+        address = '127.0.0.1'
+        base_port = 5557
+        for i in range(5):
+            port = base_port + i
+            self.agents.append(monitoring_center.Agent(address, port))
+            center_storage.add_active_agent(address, port)
+
     def test_parse_log_level(self):
         """Check parsing string to log level."""
 
@@ -44,14 +55,10 @@ class TestMonitoringCenterManager(unittest.TestCase):
         golden_files.append(('127.0.0.1:5555', 'space2', 'obj2', 'content2'))
         golden_files.append(('127.0.0.1:5555', 'space3', 'obj3', 'content3'))
 
-        mcm = monitoring_center.MonitoringCenterManager()
-        mcm.update_files(agent, new_files)
+        self.mcm.update_files(agent, new_files)
         files_from_db = center_storage.get_full()
 
-        self.assertEqual(len(files_from_db), len(golden_files))
-
-        for f in files_from_db:
-            self.assertTrue(f in golden_files)
+        self.assertTrue(files_from_db == golden_files)
 
     def test_two_update_files(self):
         """Check update_files () method for update objects in monitoring DB:
@@ -72,23 +79,53 @@ class TestMonitoringCenterManager(unittest.TestCase):
         new_files.append(['space2', 'obj2', 'contentFake2'])
         new_files.append(['space3', 'obj3', 'contentFake3'])
 
-        mcm = monitoring_center.MonitoringCenterManager()
-        mcm.update_files(agent, new_files)
+        self.mcm.update_files(agent, new_files)
 
         new_files = []
         new_files.append(['space1', 'obj1', 'content1'])
         new_files.append(['space2', 'obj2', 'content2'])
         new_files.append(['space3', 'obj3', 'content3'])
 
-        mcm = monitoring_center.MonitoringCenterManager()
-        mcm.update_files(agent, new_files)
+        self.mcm.update_files(agent, new_files)
 
         files_from_db = center_storage.get_full()
 
-        self.assertEqual(len(files_from_db), len(golden_files))
+        self.assertTrue(files_from_db == golden_files)
 
-        for f in files_from_db:
-            self.assertTrue(f in golden_files)
+    def test_handle_failed_connection(self):
+        """Check handle_failed_connection method:
+        1. Call handle_failed_connection 3 times for one agent;
+        2. Check that this agent has been deleted from list active agents."""
+
+        mcm = self.mcm
+        mcm._remove_active_agent = MagicMock()
+
+        NUMBER_ATTEMPTS = 3
+        monitoring_center.NUMBER_ATTEMPTS = NUMBER_ATTEMPTS
+
+        for i in range(NUMBER_ATTEMPTS):
+            mcm.handle_failed_connection(self.agent)
+
+        mcm._remove_active_agent.assert_called()
+
+    def test_get_active_agents(self):
+        """Check _get_active_agents method:
+        1. Add some active agents to DB;
+        2. Get list of agents and compare with golden list."""
+
+        agents_from_db = self.mcm._get_active_agents()
+        self.assertTrue(self.agents == agents_from_db)
+
+    def test_remove_active_agent(self):
+        """Check _remove_active_agent method:
+        1. Add some active agents to DB;
+        2. Call _remove_active_agent for some agent;
+        3. Check that this agent has been removed."""
+
+        agent = self.agents.pop()
+        self.mcm._remove_active_agent(agent)
+        agents_from_db = self.mcm._get_active_agents()
+        self.assertTrue(self.agents == agents_from_db)
 
 
 class TestAgentSecretary(unittest.TestCase):
