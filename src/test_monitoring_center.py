@@ -32,11 +32,9 @@ class TestMonitoringFunctions(unittest.TestCase):
         golden_files.append(('127.0.0.1:5555', 'space2', 'obj2', 'content2'))
         golden_files.append(('127.0.0.1:5555', 'space3', 'obj3', 'content3'))
 
-        monitoring_center.update_files(agent, new_files)
+        mcm = monitoring_center.MonitoringCenterManager()
+        mcm.update_files(agent, new_files)
         files_from_db = center_storage.get_full()
-
-        print("Files from db:", str(files_from_db))
-        print("Golden files:", str(golden_files))
 
         self.assertEqual(len(files_from_db), len(golden_files))
 
@@ -58,19 +56,18 @@ class TestMonitoringFunctions(unittest.TestCase):
         new_files.append(['space2', 'obj2', 'contentFake2'])
         new_files.append(['space3', 'obj3', 'contentFake3'])
 
-        monitoring_center.update_files(agent, new_files)
+        mcm = monitoring_center.MonitoringCenterManager()
+        mcm.update_files(agent, new_files)
 
         new_files = []
         new_files.append(['space1', 'obj1', 'content1'])
         new_files.append(['space2', 'obj2', 'content2'])
         new_files.append(['space3', 'obj3', 'content3'])
 
-        monitoring_center.update_files(agent, new_files)
+        mcm = monitoring_center.MonitoringCenterManager()
+        mcm.update_files(agent, new_files)
 
         files_from_db = center_storage.get_full()
-
-        print("Files from db:", str(files_from_db))
-        print("Golden files:", str(golden_files))
 
         self.assertEqual(len(files_from_db), len(golden_files))
 
@@ -91,23 +88,28 @@ class TestAgentSecretary(unittest.TestCase):
         self.assertEqual(agent_secretary._agent_parse(reg_rquest), agent)
 
     def test_register_agent(self):
-        monitoring_center.active_agents = []
+        center_storage.create_empty_monitoring_db()
+
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
 
         self.assertTrue(agent_secretary._register_agent(agent))
-        self.assertTrue(agent in monitoring_center.active_agents)
+        self.assertTrue(center_storage.is_agent_exist(
+                        agent.address, agent.port))
 
     def test_register_duplicated_agent(self):
-        monitoring_center.active_agents = []
+        center_storage.create_empty_monitoring_db()
+
         agent_secretary = monitoring_center.AgentSecretary("127.0.0.1", 5555)
         agent = monitoring_center.Agent("127.0.0.1", 5557)
 
         self.assertTrue(agent_secretary._register_agent(agent))
-        self.assertTrue(agent in monitoring_center.active_agents)
+        self.assertTrue(center_storage.is_agent_exist(
+                        agent.address, agent.port))
 
         self.assertFalse(agent_secretary._register_agent(agent))
-        self.assertTrue(agent in monitoring_center.active_agents)
+        self.assertTrue(center_storage.is_agent_exist(
+                        agent.address, agent.port))
 
 
 if __name__ == '__main__':
