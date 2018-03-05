@@ -89,6 +89,16 @@ class BaseMonitoring:
         """Check every object in the space and save updates."""
 
         objects = self.get_objects()
+        objects_from_db = [o[1] for o in get_full_last_version()
+                           if o[0] == self.space_name]
 
         for object_name in objects:
             self.check_object(object_name)
+
+            if object_name in objects_from_db:
+                objects_from_db.remove(object_name)
+
+        for object_name in objects_from_db:
+            log.debug("Object %s has been removed" % (object_name))
+            update_diff_object(self.space_name, object_name, "")
+            update_last_version_object(self.space_name, object_name, "")
